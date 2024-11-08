@@ -11,7 +11,7 @@ export class LocalStorageCache {
     globalThis.localStorage.setItem(key, valueStr);
   }
 
-  public static getValue<T>(key: string): T | undefined {
+  public static getValue<T>(key: string, logError = true): T | undefined {
     const jsonStr = globalThis.localStorage.getItem(key);
     if (!jsonStr) return undefined;
 
@@ -35,7 +35,9 @@ export class LocalStorageCache {
 
       return obj.value;
     } catch (e) {
-      console.error(`Found invalid storage value: ${key}=${jsonStr}:`, e);
+      if (logError) {
+        console.error(`Found invalid storage value: ${key}=${jsonStr}:`, e);
+      }
       globalThis.localStorage.removeItem(key);
       return undefined;
     }
