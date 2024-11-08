@@ -1,7 +1,7 @@
 {
   "name": "@choksheak/ts-utils",
   "license": "The Unlicense",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
   "scripts": {
@@ -9,7 +9,8 @@
     "format": "prettier --write \"**/*.{js,ts}\"",
     "test": "jest",
     "test:watch": "jest --watch",
-    "pub": "npm publish --access=public"
+    "build": "tsup src/*",
+    "pub": "npm run build && npm publish --access=public"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",
@@ -24,6 +25,7 @@
     "prettier": "^3.3.3",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
+    "tsup": "^8.3.5",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.13.0"
   }
