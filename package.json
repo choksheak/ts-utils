@@ -6,7 +6,8 @@
   "private": false,
   "scripts": {
     "lint": "eslint src/**",
-    "format": "prettier --write \"**/*.{js,ts}\""
+    "format": "prettier --write \"**/*.{js,ts}\"",
+    "pub": "npm publish --access=public"
   },
   "devDependencies": {
     "@eslint/js": "^9.14.0",
