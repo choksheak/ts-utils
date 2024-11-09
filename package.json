@@ -6,11 +6,11 @@
   "private": false,
   "scripts": {
     "lint": "eslint src/**",
-    "format": "prettier --write \"**/*.{js,ts}\"",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "format": "prettier --write \"**/*.{ts}\"",
+    "test": "npm run clean && jest",
+    "test:watch": "npm run clean && jest --watch",
     "clean": "rm -rf dist",
-    "ci": "npm run clean && npm run lint && npm run format && npm run test",
+    "ci": "npm run lint && npm run format && npm run test",
     "build": "tsup src/*",
     "gen-types": "tsc --emitDeclarationOnly --declaration",
     "pub": "scripts/publish.sh"
