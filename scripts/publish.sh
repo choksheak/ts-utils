@@ -1,0 +1,22 @@
+#!/bin/sh
+
+cd $(dirname "$0")/..
+
+echo CI
+npm run ci
+
+echo Build
+npm run build
+
+echo Generate types
+npm run gen-types
+
+echo Copy files
+cp -r package.json LICENSE README.md src dist
+
+echo Remove test files
+rm dist/*.test.* dist/src/*.test.*
+
+echo Publish
+cd dist
+npm publish --access=public

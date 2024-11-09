@@ -1,7 +1,7 @@
 {
   "name": "@choksheak/ts-utils",
   "license": "The Unlicense",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
   "scripts": {
@@ -10,15 +10,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "clean": "rm -rf dist",
+    "ci": "npm run clean && npm run lint && npm run format && npm run test",
     "build": "tsup src/*",
     "gen-types": "tsc --emitDeclarationOnly --declaration",
-    "pub": "npm run build && npm run gen-types && npm publish --access=public"
+    "pub": "scripts/publish.sh"
   },
-  "files": [
-    "README.md",
-    "dist",
-    "src"
-  ],
   "devDependencies": {
     "@eslint/js": "^9.14.0",
     "@jest/globals": "^29.7.0",
