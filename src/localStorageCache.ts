@@ -43,3 +43,27 @@ export class LocalStorageCache {
     }
   }
 }
+
+/** Same as above, but saves some config for reuse. */
+export class LocalStorageCacheItem<T> {
+  public constructor(
+    public readonly key: string,
+    public readonly expireDeltaMs: number,
+    public readonly logError = true,
+    defaultValue?: T,
+  ) {
+    if (defaultValue !== undefined) {
+      if (this.get() === undefined) {
+        this.set(defaultValue);
+      }
+    }
+  }
+
+  public set(value: T) {
+    LocalStorageCache.setValue(this.key, value, this.expireDeltaMs);
+  }
+
+  public get(): T | undefined {
+    return LocalStorageCache.getValue(this.key, this.logError);
+  }
+}
