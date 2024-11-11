@@ -13,7 +13,10 @@ export class LocalStorageCache {
 
   public static getValue<T>(key: string, logError = true): T | undefined {
     const jsonStr = globalThis.localStorage.getItem(key);
-    if (!jsonStr) return undefined;
+
+    if (!jsonStr || typeof jsonStr !== "string") {
+      return undefined;
+    }
 
     try {
       const obj: { value: T; expireMs: number } | undefined =
@@ -22,13 +25,10 @@ export class LocalStorageCache {
         !obj ||
         typeof obj !== "object" ||
         !("value" in obj) ||
-        !("expireMs" in obj)
+        !("expireMs" in obj) ||
+        typeof obj.expireMs !== "number" ||
+        Date.now() >= obj.expireMs
       ) {
-        globalThis.localStorage.removeItem(key);
-        return undefined;
-      }
-
-      if (Date.now() >= obj.expireMs) {
         globalThis.localStorage.removeItem(key);
         return undefined;
       }
