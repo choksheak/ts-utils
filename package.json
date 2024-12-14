@@ -1,12 +1,12 @@
 {
   "name": "@choksheak/ts-utils",
   "license": "The Unlicense",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
   "scripts": {
     "lint": "eslint src/**",
-    "format": "prettier --write \"**/*.{ts}\"",
+    "format": "prettier --write \"**/*.ts\"",
     "test": "npm run clean && jest",
     "test:watch": "npm run clean && jest --watch",
     "clean": "rm -rf dist",
