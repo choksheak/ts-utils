@@ -3,7 +3,8 @@
  * date and time durations.
  *
  * Note that month and year do not have fixed durations, and hence are excluded
- * from this file.
+ * from this file. Weeks have fixed durations, but are excluded because we
+ * use days as the max duration supported.
  */
 
 import {
@@ -24,8 +25,14 @@ export type Duration = {
   milliseconds?: number;
 };
 
+/**
+ * One of: days, hours, minutes, seconds, milliseconds
+ */
 export type DurationType = keyof Duration;
 
+/**
+ * Order in which the duration type appears in the duration string.
+ */
 export const DURATION_TYPE_SEQUENCE: DurationType[] = [
   "days",
   "hours",
@@ -109,9 +116,10 @@ function getDurationTypeSeparator(style: DurationStyle): string {
 
 /**
  * Convert a milliseconds duration into a Duration object. If the given ms is
- * zero, then return an object with a single field of zero.
+ * zero, then return an object with a single field of zero with duration type
+ * of durationTypeForZero.
  *
- * durationTypeForZero - Defaults to 'milliseconds'
+ * @param durationTypeForZero Defaults to 'milliseconds'
  */
 export function msToDuration(
   ms: number,
@@ -190,7 +198,7 @@ export function durationToMs(duration: Duration): number {
  * Format a given Duration object into a string. If the object has no fields,
  * then returns an empty string.
  *
- * style - Defaults to 'short'
+ * @param style Defaults to 'short'
  */
 export function formatDuration(duration: Duration, style?: DurationStyle) {
   style = style ?? "short";
@@ -216,8 +224,8 @@ export function formatDuration(duration: Duration, style?: DurationStyle) {
 /**
  * Convert a millisecond duration into a human-readable duration string.
  *
- * options.durationTypeForZero - Defaults to 'milliseconds'
- * options.style - Defaults to 'short'
+ * @param options.durationTypeForZero - Defaults to 'milliseconds'
+ * @param options.style - Defaults to 'short'
  */
 export function readableDuration(
   ms: number,
