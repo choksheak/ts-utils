@@ -1,3 +1,5 @@
+import { Duration, durationToMs } from "./duration";
+
 /**
  * Simple local storage cache with support for auto-expiration.
  * Note that this works in the browser context only because nodejs does not
@@ -9,13 +11,18 @@
  *
  * In order to provide proper type-checking, please always specify the T
  * type parameter. E.g. const item = storeItem<string>("name", 10_000);
+ *
+ * expires - Either a number in milliseconds, or a Duration object
  */
 export function storeItem<T>(
   key: string,
-  expireDeltaMs: number,
+  expires: number | Duration,
   logError = true,
   defaultValue?: T,
 ) {
+  const expireDeltaMs =
+    typeof expires === "number" ? expires : durationToMs(expires);
+
   return new CacheItem<T>(key, expireDeltaMs, logError, defaultValue);
 }
 
