@@ -1,5 +1,7 @@
 import { Duration, durationToMs } from "./duration";
 
+export type StoredItem<T> = { value: T; expireMs: number };
+
 /**
  * Simple local storage cache with support for auto-expiration.
  * Note that this works in the browser context only because nodejs does not
@@ -12,7 +14,12 @@ import { Duration, durationToMs } from "./duration";
  * In order to provide proper type-checking, please always specify the T
  * type parameter. E.g. const item = storeItem<string>("name", 10_000);
  *
- * expires - Either a number in milliseconds, or a Duration object
+ * @param key The store key in local storage.
+ * @param expires Either a number in milliseconds, or a Duration object
+ * @param logError Log an error if we found an invalid object in the store.
+ *   The invalid object is usually a string that cannot be parsed as JSON.
+ * @param defaultValue Specify a default value to use for the object. Defaults
+ *   to undefined.
  */
 export function storeItem<T>(
   key: string,
@@ -34,21 +41,16 @@ class CacheItem<T> {
     public readonly key: string,
     public readonly expireDeltaMs: number,
     public readonly logError: boolean,
-    defaultValue: T | undefined,
-  ) {
-    if (defaultValue !== undefined) {
-      if (this.get() === undefined) {
-        this.set(defaultValue);
-      }
-    }
-  }
+    public readonly defaultValue: T | undefined,
+  ) {}
 
   /**
    * Set the value of this item with auto-expiration.
    */
   public set(value: T): void {
     const expireMs = Date.now() + this.expireDeltaMs;
-    const valueStr = JSON.stringify({ value, expireMs });
+    const toStore: StoredItem<T> = { value, expireMs };
+    const valueStr = JSON.stringify(toStore);
 
     globalThis.localStorage.setItem(this.key, valueStr);
   }
@@ -59,13 +61,13 @@ class CacheItem<T> {
   public get(): T | undefined {
     const jsonStr = globalThis.localStorage.getItem(this.key);
 
-    if (!jsonStr || typeof jsonStr !== "string") {
-      return undefined;
+    if (!jsonStr) {
+      return this.defaultValue;
     }
 
     try {
-      const obj: { value: T; expireMs: number } | undefined =
-        JSON.parse(jsonStr);
+      const obj: StoredItem<T> | undefined = JSON.parse(jsonStr);
+
       if (
         !obj ||
         typeof obj !== "object" ||
@@ -74,8 +76,8 @@ class CacheItem<T> {
         typeof obj.expireMs !== "number" ||
         Date.now() >= obj.expireMs
       ) {
-        globalThis.localStorage.removeItem(this.key);
-        return undefined;
+        this.remove();
+        return this.defaultValue;
       }
 
       return obj.value;
@@ -86,8 +88,8 @@ class CacheItem<T> {
           e,
         );
       }
-      globalThis.localStorage.removeItem(this.key);
-      return undefined;
+      this.remove();
+      return this.defaultValue;
     }
   }
 
