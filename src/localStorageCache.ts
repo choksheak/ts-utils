@@ -2,71 +2,32 @@
  * Simple local storage cache with support for auto-expiration.
  * Note that this works in the browser context only because nodejs does not
  * have local storage.
+ *
+ * Create a cache item accessor object with auto-expiration. The value will
+ * always be stored as a string by applying JSON.stringify(), and will be
+ * returned in the same object type by applying JSON.parse().
+ *
+ * In order to provide proper type-checking, please always specify the T
+ * type parameter. E.g. const item = storeItem<string>("name", 10_000);
  */
-export function storeSet<T>(key: string, value: T, expireDeltaMs: number) {
-  const expireMs = Date.now() + expireDeltaMs;
-  const valueStr = JSON.stringify({ value, expireMs });
-
-  globalThis.localStorage.setItem(key, valueStr);
+export function storeItem<T>(
+  key: string,
+  expireDeltaMs: number,
+  logError = true,
+  defaultValue?: T,
+) {
+  return new CacheItem<T>(key, expireDeltaMs, logError, defaultValue);
 }
 
-export function storeGet<T>(key: string, logError = true): T | undefined {
-  const jsonStr = globalThis.localStorage.getItem(key);
-
-  if (!jsonStr || typeof jsonStr !== "string") {
-    return undefined;
-  }
-
-  try {
-    const obj: { value: T; expireMs: number } | undefined = JSON.parse(jsonStr);
-    if (
-      !obj ||
-      typeof obj !== "object" ||
-      !("value" in obj) ||
-      !("expireMs" in obj) ||
-      typeof obj.expireMs !== "number" ||
-      Date.now() >= obj.expireMs
-    ) {
-      globalThis.localStorage.removeItem(key);
-      return undefined;
-    }
-
-    return obj.value;
-  } catch (e) {
-    if (logError) {
-      console.error(`Found invalid storage value: ${key}=${jsonStr}:`, e);
-    }
-    globalThis.localStorage.removeItem(key);
-    return undefined;
-  }
-}
-
-export function storeRemove(key: string) {
-  globalThis.localStorage.removeItem(key);
-}
-
-// Use static class to do the same thing.
-export class LocalStorageCache {
-  public static set<T>(key: string, value: T, expireDeltaMs: number) {
-    return storeSet(key, value, expireDeltaMs);
-  }
-
-  public static get<T>(key: string, logError = true): T | undefined {
-    return storeGet(key, logError);
-  }
-
-  public static remove(key: string) {
-    return storeRemove(key);
-  }
-}
-
-/** Same as above, but saves some config for reuse. */
-export class LocalStorageCacheItem<T> {
+class CacheItem<T> {
+  /**
+   * Create a cache item accessor object with auto-expiration.
+   */
   public constructor(
     public readonly key: string,
     public readonly expireDeltaMs: number,
-    public readonly logError = true,
-    defaultValue?: T,
+    public readonly logError: boolean,
+    defaultValue: T | undefined,
   ) {
     if (defaultValue !== undefined) {
       if (this.get() === undefined) {
@@ -75,30 +36,58 @@ export class LocalStorageCacheItem<T> {
     }
   }
 
+  /**
+   * Set the value of this item with auto-expiration.
+   */
   public set(value: T): void {
-    return storeSet(this.key, value, this.expireDeltaMs);
+    const expireMs = Date.now() + this.expireDeltaMs;
+    const valueStr = JSON.stringify({ value, expireMs });
+
+    globalThis.localStorage.setItem(this.key, valueStr);
   }
 
+  /**
+   * Get the value of this item, or undefined if value is not set or expired.
+   */
   public get(): T | undefined {
-    return storeGet(this.key, this.logError);
+    const jsonStr = globalThis.localStorage.getItem(this.key);
+
+    if (!jsonStr || typeof jsonStr !== "string") {
+      return undefined;
+    }
+
+    try {
+      const obj: { value: T; expireMs: number } | undefined =
+        JSON.parse(jsonStr);
+      if (
+        !obj ||
+        typeof obj !== "object" ||
+        !("value" in obj) ||
+        !("expireMs" in obj) ||
+        typeof obj.expireMs !== "number" ||
+        Date.now() >= obj.expireMs
+      ) {
+        globalThis.localStorage.removeItem(this.key);
+        return undefined;
+      }
+
+      return obj.value;
+    } catch (e) {
+      if (this.logError) {
+        console.error(
+          `Found invalid storage value: ${this.key}=${jsonStr}:`,
+          e,
+        );
+      }
+      globalThis.localStorage.removeItem(this.key);
+      return undefined;
+    }
   }
 
+  /**
+   * Remove the value of this item.
+   */
   public remove(): void {
-    return storeRemove(this.key);
+    globalThis.localStorage.removeItem(this.key);
   }
-}
-
-/** Same as LocalStorageCacheItem, but as a function. */
-export function storeItem<T>(
-  key: string,
-  expireDeltaMs: number,
-  logError = true,
-  defaultValue?: T,
-) {
-  return new LocalStorageCacheItem<T>(
-    key,
-    expireDeltaMs,
-    logError,
-    defaultValue,
-  );
 }

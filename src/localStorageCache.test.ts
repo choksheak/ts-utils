@@ -1,4 +1,4 @@
-import { LocalStorageCache } from "./localStorageCache";
+import { storeItem } from "./localStorageCache";
 
 describe("LocalStorageCache", () => {
   beforeEach(() => {
@@ -17,7 +17,8 @@ describe("LocalStorageCache", () => {
       const value = "testValue";
       const expireDeltaMs = 1000; // 1 second
 
-      LocalStorageCache.set(key, value, expireDeltaMs);
+      const item = storeItem(key, expireDeltaMs);
+      item.set(value);
 
       const storedValue = JSON.parse(
         global.localStorage.getItem(key) as string,
@@ -33,9 +34,10 @@ describe("LocalStorageCache", () => {
       const value = "testValue";
       const expireDeltaMs = 1000; // 1 second
 
-      LocalStorageCache.set(key, value, expireDeltaMs);
+      const item = storeItem(key, expireDeltaMs);
+      item.set(value);
 
-      expect(LocalStorageCache.get(key)).toBe(value);
+      expect(item.get()).toBe(value);
     });
 
     it("should return undefined if the value has expired", () => {
@@ -43,17 +45,20 @@ describe("LocalStorageCache", () => {
       const value = "testValue";
       const expireDeltaMs = 1000; // 1 second
 
-      LocalStorageCache.set(key, value, expireDeltaMs);
+      const item = storeItem(key, expireDeltaMs);
+      item.set(value);
 
       // Advance time by 2 seconds to ensure expiration
       jest.advanceTimersByTime(2000);
 
-      expect(LocalStorageCache.get(key)).toBeUndefined();
+      expect(item.get()).toBeUndefined();
       expect(global.localStorage.getItem(key)).toBeNull(); // Ensure item is removed
     });
 
     it("should return undefined if the key does not exist", () => {
-      expect(LocalStorageCache.get("nonexistentKey")).toBeUndefined();
+      const item = storeItem("nonexistentKey", 10000);
+
+      expect(item.get()).toBeUndefined();
     });
 
     it("should return undefined if the stored data is invalid and remove it from storage", () => {
@@ -63,7 +68,8 @@ describe("LocalStorageCache", () => {
       // Set an invalid JSON format in localStorage
       global.localStorage.setItem(key, "invalidJSON");
 
-      expect(LocalStorageCache.get(key)).toBeUndefined();
+      const item = storeItem(key, 10000);
+      expect(item.get()).toBeUndefined();
       expect(global.localStorage.getItem(key)).toBeNull(); // Ensure item is removed
       expect(consoleError).toHaveBeenCalledTimes(1);
       expect(consoleError.mock.calls[0][0]).toBe(
@@ -79,17 +85,20 @@ describe("LocalStorageCache", () => {
         JSON.stringify({ someOtherField: "data" }),
       );
 
-      expect(LocalStorageCache.get(key)).toBeUndefined();
+      const item = storeItem(key, 10000);
+
+      expect(item.get()).toBeUndefined();
       expect(global.localStorage.getItem(key)).toBeNull(); // Ensure item is removed
     });
 
     it("should remove an item if remove was called", () => {
       const key = "testKey";
-      LocalStorageCache.set<unknown>(key, { data: 1 }, 10000);
-      expect(LocalStorageCache.get(key)).toEqual({ data: 1 });
+      const item = storeItem(key, 10000);
+      item.set({ data: 1 });
+      expect(item.get()).toEqual({ data: 1 });
 
-      LocalStorageCache.remove(key);
-      expect(LocalStorageCache.get(key)).toBeUndefined();
+      item.remove();
+      expect(item.get()).toBeUndefined();
     });
   });
 });
