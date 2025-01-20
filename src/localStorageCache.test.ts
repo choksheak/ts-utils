@@ -82,5 +82,14 @@ describe("LocalStorageCache", () => {
       expect(LocalStorageCache.getValue(key)).toBeUndefined();
       expect(global.localStorage.getItem(key)).toBeNull(); // Ensure item is removed
     });
+
+    it("should remove an item if remove was called", () => {
+      const key = "testKey";
+      LocalStorageCache.setValue<unknown>(key, { data: 1 }, 10000);
+      expect(LocalStorageCache.getValue(key)).toEqual({ data: 1 });
+
+      LocalStorageCache.remove(key);
+      expect(LocalStorageCache.getValue(key)).toBeUndefined();
+    });
   });
 });

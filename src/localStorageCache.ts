@@ -42,6 +42,10 @@ export class LocalStorageCache {
       return undefined;
     }
   }
+
+  public static remove(key: string) {
+    globalThis.localStorage.removeItem(key);
+  }
 }
 
 /** Same as above, but saves some config for reuse. */
@@ -59,11 +63,15 @@ export class LocalStorageCacheItem<T> {
     }
   }
 
-  public set(value: T) {
+  public set(value: T): void {
     LocalStorageCache.setValue(this.key, value, this.expireDeltaMs);
   }
 
   public get(): T | undefined {
     return LocalStorageCache.getValue(this.key, this.logError);
+  }
+
+  public remove(): void {
+    return LocalStorageCache.remove(this.key);
   }
 }
