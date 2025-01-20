@@ -1,7 +1,7 @@
 {
   "name": "@choksheak/ts-utils",
   "license": "The Unlicense",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
   "scripts": {
