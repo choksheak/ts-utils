@@ -4,14 +4,14 @@
  * have local storage.
  */
 export class LocalStorageCache {
-  public static setValue<T>(key: string, value: T, expireDeltaMs: number) {
+  public static set<T>(key: string, value: T, expireDeltaMs: number) {
     const expireMs = Date.now() + expireDeltaMs;
     const valueStr = JSON.stringify({ value, expireMs });
 
     globalThis.localStorage.setItem(key, valueStr);
   }
 
-  public static getValue<T>(key: string, logError = true): T | undefined {
+  public static get<T>(key: string, logError = true): T | undefined {
     const jsonStr = globalThis.localStorage.getItem(key);
 
     if (!jsonStr || typeof jsonStr !== "string") {
@@ -64,11 +64,11 @@ export class LocalStorageCacheItem<T> {
   }
 
   public set(value: T): void {
-    LocalStorageCache.setValue(this.key, value, this.expireDeltaMs);
+    LocalStorageCache.set(this.key, value, this.expireDeltaMs);
   }
 
   public get(): T | undefined {
-    return LocalStorageCache.getValue(this.key, this.logError);
+    return LocalStorageCache.get(this.key, this.logError);
   }
 
   public remove(): void {
