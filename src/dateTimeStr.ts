@@ -48,3 +48,35 @@ export function tzShort(dt = new Date()): string {
   const tzHours = dt.getTimezoneOffset() / 60;
   return tzHours >= 0 ? "+" + tzHours : String(tzHours);
 }
+
+export function getLongMonthNameZeroIndexed(
+  month: number,
+  locales: Intl.LocalesArgument = "default",
+): string {
+  return new Date(2024, month, 15).toLocaleString(locales, {
+    month: "long",
+  });
+}
+
+export function getLongMonthNameOneIndexed(
+  month: number,
+  locales: Intl.LocalesArgument = "default",
+): string {
+  return getLongMonthNameZeroIndexed(month - 1, locales);
+}
+
+export function getShortMonthNameZeroIndexed(
+  month: number,
+  locales: Intl.LocalesArgument = "default",
+): string {
+  return new Date(2000, month, 15).toLocaleString(locales, {
+    month: "short",
+  });
+}
+
+export function getShortMonthNameOneIndexed(
+  month: number,
+  locales: Intl.LocalesArgument = "default",
+): string {
+  return getShortMonthNameZeroIndexed(month - 1, locales);
+}
