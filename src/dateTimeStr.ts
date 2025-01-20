@@ -1,3 +1,9 @@
+/**
+ * Returns a date in yyyy-MM-dd format. E.g. '2000-01-02'.
+ *
+ * @param dt Specify a date object or default to the current date.
+ * @param separator Defaults to '-'.
+ */
 export function yyyyMmDd(dt = new Date(), separator = "-"): string {
   const yr = dt.getFullYear();
   const mth = dt.getMonth() + 1;
@@ -12,6 +18,12 @@ export function yyyyMmDd(dt = new Date(), separator = "-"): string {
   );
 }
 
+/**
+ * Returns a date in hh:mm:ss format. E.g. '01:02:03'.
+ *
+ * @param dt Specify a date object or default to the current date/time.
+ * @param separator Defaults to ':'.
+ */
 export function hhMmSs(dt = new Date(), separator = ":"): string {
   const hr = dt.getHours();
   const min = dt.getMinutes();
@@ -26,6 +38,13 @@ export function hhMmSs(dt = new Date(), separator = ":"): string {
   );
 }
 
+/**
+ * Returns a date in hh:mm:ss.SSS format. E.g. '01:02:03.004'.
+ *
+ * @param dt Specify a date object or default to the current date/time.
+ * @param timeSeparator Separator for hh/mm/ss. Defaults to ':'.
+ * @param msSeparator Separator before SSS. Defaults to '.'.
+ */
 export function hhMmSsMs(
   dt = new Date(),
   timeSeparator = ":",
@@ -40,6 +59,12 @@ export function hhMmSsMs(
   );
 }
 
+/**
+ * Returns the timezone string for the given date. E.g. '+8', '-3.5'.
+ * Returns 'Z' for UTC.
+ *
+ * @param dt Specify a date object or default to the current date/time.
+ */
 export function tzShort(dt = new Date()): string {
   if (dt.getTimezoneOffset() === 0) {
     return "Z";
@@ -49,6 +74,12 @@ export function tzShort(dt = new Date()): string {
   return tzHours >= 0 ? "+" + tzHours : String(tzHours);
 }
 
+/**
+ * Returns the long month name, zero-indexed. E.g. 0 for 'January'.
+ *
+ * @param month Zero-indexed month.
+ * @param locales Specify the locale, e.g. 'en-US', new Intl.Locale("en-US").
+ */
 export function getLongMonthNameZeroIndexed(
   month: number,
   locales: Intl.LocalesArgument = "default",
@@ -58,6 +89,12 @@ export function getLongMonthNameZeroIndexed(
   });
 }
 
+/**
+ * Returns the long month name, one-indexed. E.g. 1 for 'January'.
+ *
+ * @param month One-indexed month.
+ * @param locales Specify the locale, e.g. 'en-US', new Intl.Locale("en-US").
+ */
 export function getLongMonthNameOneIndexed(
   month: number,
   locales: Intl.LocalesArgument = "default",
@@ -65,6 +102,12 @@ export function getLongMonthNameOneIndexed(
   return getLongMonthNameZeroIndexed(month - 1, locales);
 }
 
+/**
+ * Returns the short month name, zero-indexed. E.g. 0 for 'Jan'.
+ *
+ * @param month Zero-indexed month.
+ * @param locales Specify the locale, e.g. 'en-US', new Intl.Locale("en-US").
+ */
 export function getShortMonthNameZeroIndexed(
   month: number,
   locales: Intl.LocalesArgument = "default",
@@ -74,6 +117,12 @@ export function getShortMonthNameZeroIndexed(
   });
 }
 
+/**
+ * Returns the short month name, one-indexed. E.g. 1 for 'Jan'.
+ *
+ * @param month One-indexed month.
+ * @param locales Specify the locale, e.g. 'en-US', new Intl.Locale("en-US").
+ */
 export function getShortMonthNameOneIndexed(
   month: number,
   locales: Intl.LocalesArgument = "default",
