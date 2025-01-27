@@ -168,12 +168,12 @@ export class KVStore {
   public async set<T>(
     key: string,
     value: T,
-    expireDeltaMs: number = this.defaultExpiryDeltaMs,
+    expiryDeltaMs: number = this.defaultExpiryDeltaMs,
   ): Promise<T> {
     const obj = {
       key,
       value,
-      expireMs: Date.now() + expireDeltaMs,
+      expireMs: Date.now() + expiryDeltaMs,
     };
 
     return await this.transact<T>(
@@ -380,3 +380,39 @@ export const kvStore = new KVStore(
   DEFAULT_DB_VERSION,
   DEFAULT_EXPIRY_DELTA_MS,
 );
+
+/**
+ * Class to represent one key in the store with a default expiration.
+ */
+class KvStoreItem<T> {
+  public constructor(
+    public readonly key: string,
+    public readonly defaultExpiryDeltaMs: number,
+    public readonly store = kvStore,
+  ) {}
+
+  public async get(): Promise<Awaited<T> | undefined> {
+    return await this.store.get(this.key);
+  }
+
+  public async set(
+    value: T,
+    expiryDeltaMs: number = this.defaultExpiryDeltaMs,
+  ): Promise<void> {
+    await this.store.set(this.key, value, expiryDeltaMs);
+  }
+
+  public async delete(): Promise<void> {
+    await this.store.delete(this.key);
+  }
+}
+
+/**
+ * Create a KV store item with a key and a default expiration.
+ */
+export function kvStoreItem<T>(
+  key: string,
+  defaultExpiryDeltaMs: number,
+): KvStoreItem<T> {
+  return new KvStoreItem<T>(key, defaultExpiryDeltaMs);
+}
