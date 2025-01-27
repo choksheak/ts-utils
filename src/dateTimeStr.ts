@@ -1,3 +1,17 @@
+export type AnyDateTime = number | Date | string;
+
+/**
+ * Convert a number (epoch milliseconds), string (parseable date/time), or
+ * Date object (no conversion) into a Date object.
+ */
+export function toDate(ts: AnyDateTime): Date {
+  if (typeof ts === "number" || typeof ts === "string") {
+    return new Date(ts);
+  }
+
+  return ts;
+}
+
 /**
  * Returns a date in yyyy-MM-dd format. E.g. '2000-01-02'.
  *
@@ -128,4 +142,14 @@ export function getShortMonthNameOneIndexed(
   locales: Intl.LocalesArgument = "default",
 ): string {
   return getShortMonthNameZeroIndexed(month - 1, locales);
+}
+
+/**
+ * Returns a human-readable string date/time like '2025-01-01 22:31:16Z'.
+ * Excludes the milliseconds assuming it is not necessary for display.
+ */
+export function getDisplayDateTime(ts: AnyDateTime) {
+  const iso = toDate(ts).toISOString();
+  const noMs = iso.slice(0, 19) + "Z";
+  return noMs.replace("T", " ");
 }

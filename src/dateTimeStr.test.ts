@@ -1,4 +1,5 @@
 import {
+  getDisplayDateTime,
   getLongMonthNameOneIndexed,
   getLongMonthNameZeroIndexed,
   getShortMonthNameOneIndexed,
@@ -46,5 +47,11 @@ describe("DateTimeStr", () => {
 
     expect(getShortMonthNameZeroIndexed(0, enUS)).toBe("Jan");
     expect(getShortMonthNameOneIndexed(1, "en-US")).toBe("Jan");
+  });
+
+  test("getDisplayDateTime", () => {
+    expect(getDisplayDateTime("2025-01-01T19:43:08.123Z")).toBe(
+      "2025-01-01 19:43:08Z",
+    );
   });
 });
