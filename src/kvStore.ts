@@ -32,7 +32,8 @@ export const GC_INTERVAL_MS = MILLIS_PER_DAY;
 type StoredObject<T> = {
   key: string;
   value: T;
-  expireMs: number;
+  storedMs: number;
+  expiryMs: number;
 };
 
 /**
@@ -48,10 +49,12 @@ function validateStoredObject<T>(
     !("key" in obj) ||
     typeof obj.key !== "string" ||
     !("value" in obj) ||
+    !("storedMs" in obj) ||
+    typeof obj.storedMs !== "number" ||
     obj.value === undefined ||
-    !("expireMs" in obj) ||
-    typeof obj.expireMs !== "number" ||
-    Date.now() >= obj.expireMs
+    !("expiryMs" in obj) ||
+    typeof obj.expiryMs !== "number" ||
+    Date.now() >= obj.expiryMs
   ) {
     return undefined;
   }
@@ -170,10 +173,12 @@ export class KVStore {
     value: T,
     expiryDeltaMs: number = this.defaultExpiryDeltaMs,
   ): Promise<T> {
-    const obj = {
+    const nowMs = Date.now();
+    const obj: StoredObject<T> = {
       key,
       value,
-      expireMs: Date.now() + expiryDeltaMs,
+      storedMs: nowMs,
+      expiryMs: nowMs + expiryDeltaMs,
     };
 
     return await this.transact<T>(
@@ -210,7 +215,9 @@ export class KVStore {
     );
   }
 
-  public async get<T>(key: string): Promise<T | undefined> {
+  public async getStoredObject<T>(
+    key: string,
+  ): Promise<StoredObject<T> | undefined> {
     const stored = await this.transact<StoredObject<T> | undefined>(
       "readonly",
       (objectStore, resolve, reject) => {
@@ -236,7 +243,7 @@ export class KVStore {
         return undefined;
       }
 
-      return obj.value;
+      return obj;
     } catch (e) {
       console.error(`Invalid kv value: ${key}=${JSON.stringify(stored)}:`, e);
       await this.delete(key);
@@ -247,11 +254,17 @@ export class KVStore {
     }
   }
 
+  public async get<T>(key: string): Promise<T | undefined> {
+    const obj = await this.getStoredObject<T>(key);
+
+    return obj?.value;
+  }
+
   public async forEach(
     callback: (
       key: string,
       value: unknown,
-      expireMs: number,
+      expiryMs: number,
     ) => void | Promise<void>,
   ): Promise<void> {
     await this.transact<void>("readonly", (objectStore, resolve, reject) => {
@@ -266,7 +279,7 @@ export class KVStore {
           if (cursor.key) {
             const obj = validateStoredObject(cursor.value);
             if (obj) {
-              await callback(String(cursor.key), obj.value, obj.expireMs);
+              await callback(String(cursor.key), obj.value, obj.expiryMs);
             } else {
               await callback(String(cursor.key), undefined, 0);
             }
@@ -300,8 +313,8 @@ export class KVStore {
   /** Mainly for debugging dumps. */
   public async asMap(): Promise<Map<string, unknown>> {
     const map = new Map<string, unknown>();
-    await this.forEach((key, value, expireMs) => {
-      map.set(key, { value, expireMs });
+    await this.forEach((key, value, expiryMs) => {
+      map.set(key, { value, expiryMs });
     });
     return map;
   }
@@ -345,8 +358,8 @@ export class KVStore {
 
     const keysToDelete: string[] = [];
     await this.forEach(
-      async (key: string, value: unknown, expireMs: number) => {
-        if (value === undefined || Date.now() >= expireMs) {
+      async (key: string, value: unknown, expiryMs: number) => {
+        if (value === undefined || Date.now() >= expiryMs) {
           keysToDelete.push(key);
         }
       },
@@ -391,7 +404,16 @@ class KvStoreItem<T> {
     public readonly store = kvStore,
   ) {}
 
-  public async get(): Promise<Awaited<T> | undefined> {
+  /**
+   * Example usage:
+   *
+   *   const { value, storedMs, expiryMs } = await myKvItem.getStoredObject();
+   */
+  public async getStoredObject(): Promise<StoredObject<T> | undefined> {
+    return await this.store.getStoredObject(this.key);
+  }
+
+  public async get(): Promise<T | undefined> {
     return await this.store.get(this.key);
   }
 

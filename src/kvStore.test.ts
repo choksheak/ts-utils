@@ -34,13 +34,17 @@ describe("KVStore", () => {
     expect(await kvStore.set("hi", undefined)).toBe(undefined);
     expect(await kvStore.get("hi")).toBe(undefined);
 
-    // jest bug: Received: serializes to the same string
-    expect(JSON.stringify(await kvStore.set("hi", { a: 1 }))).toBe(
-      JSON.stringify({ a: 1 }),
-    );
-    expect(JSON.stringify(await kvStore.get("hi"))).toBe(
-      JSON.stringify({ a: 1 }),
-    );
+    const ms1 = Date.now();
+
+    expect(await kvStore.set("hi", { a: 1 })).toEqual({ a: 1 });
+    expect(await kvStore.get("hi")).toEqual({ a: 1 });
+
+    const stored = await kvStore.getStoredObject("hi");
+    const ms2 = Date.now();
+
+    expect(stored?.value).toEqual({ a: 1 });
+    expect(stored?.storedMs).toBeGreaterThanOrEqual(ms1);
+    expect(stored?.storedMs).toBeLessThanOrEqual(ms2);
   });
 
   test("forEach", async () => {
@@ -90,7 +94,7 @@ describe("KVStore", () => {
     expect(fn.mock.calls[0][0]).toBe("hi");
     expect(fn.mock.calls[0][1]).toBe(2);
     expect(fn.mock.calls[1][0]).toBe("ho");
-    expect(JSON.stringify(fn.mock.calls[1][1])).toBe(JSON.stringify({ b: 2 }));
+    expect(fn.mock.calls[1][1]).toEqual({ b: 2 });
   });
 
   test("size", async () => {
