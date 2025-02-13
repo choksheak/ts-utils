@@ -13,23 +13,28 @@ export function toDate(ts: AnyDateTime): Date {
 }
 
 /**
+ * Returns a date in yyyy-MM format. E.g. '2000-01'.
+ *
+ * @param dt Specify a date object or default to the current date.
+ * @param separator Defaults to '-'.
+ */
+export function yyyyMm(dt = new Date(), separator = "-"): string {
+  const yr = dt.getFullYear();
+  const mth = dt.getMonth() + 1;
+
+  return yr + separator + (mth < 10 ? "0" + mth : mth);
+}
+
+/**
  * Returns a date in yyyy-MM-dd format. E.g. '2000-01-02'.
  *
  * @param dt Specify a date object or default to the current date.
  * @param separator Defaults to '-'.
  */
 export function yyyyMmDd(dt = new Date(), separator = "-"): string {
-  const yr = dt.getFullYear();
-  const mth = dt.getMonth() + 1;
   const day = dt.getDate();
 
-  return (
-    yr +
-    separator +
-    (mth < 10 ? "0" + mth : mth) +
-    separator +
-    (day < 10 ? "0" + day : day)
-  );
+  return yyyyMm(dt, separator) + separator + (day < 10 ? "0" + day : day);
 }
 
 /**

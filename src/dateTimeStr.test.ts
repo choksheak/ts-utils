@@ -6,6 +6,7 @@ import {
   getShortMonthNameZeroIndexed,
   hhMmSs,
   hhMmSsMs,
+  yyyyMm,
   yyyyMmDd,
 } from "./dateTimeStr";
 
@@ -14,6 +15,14 @@ describe("DateTimeStr", () => {
   const dt2 = new Date(2024, 10, 12, 13, 14, 15, 16);
   const dt3 = new Date(2024, 11, 31, 20, 21, 22, 234);
   const enUS = new Intl.Locale("en-US");
+
+  test("yyyyMm", () => {
+    expect(yyyyMm(dt1)).toBe("2024-04");
+    expect(yyyyMm(dt2)).toBe("2024-11");
+
+    expect(yyyyMm(dt1, "/")).toBe("2024/04");
+    expect(yyyyMm(dt2, "+*")).toBe("2024+*11");
+  });
 
   test("yyyyMmDd", () => {
     expect(yyyyMmDd(dt1)).toBe("2024-04-06");
