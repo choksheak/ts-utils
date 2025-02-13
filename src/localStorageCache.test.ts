@@ -24,7 +24,7 @@ describe("LocalStorageCache", () => {
         global.localStorage.getItem(key) as string,
       );
       expect(storedValue.value).toBe(value);
-      expect(typeof storedValue.expireMs).toBe("number");
+      expect(typeof storedValue.expiryMs).toBe("number");
     });
   });
 

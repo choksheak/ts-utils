@@ -1,6 +1,6 @@
 import { Duration, durationOrMsToMs } from "./duration";
 
-export type StoredItem<T> = { value: T; expireMs: number };
+export type StoredItem<T> = { value: T; storedMs: number; expiryMs: number };
 
 /**
  * Simple local storage cache with support for auto-expiration.
@@ -46,22 +46,31 @@ class CacheItem<T> {
   /**
    * Set the value of this item with auto-expiration.
    */
-  public set(value: T): void {
-    const expireMs = Date.now() + this.expireDeltaMs;
-    const toStore: StoredItem<T> = { value, expireMs };
+  public set(
+    value: T,
+    expiryDelta: number | Duration = this.expireDeltaMs,
+  ): void {
+    const nowMs = Date.now();
+    const toStore: StoredItem<T> = {
+      value,
+      storedMs: nowMs,
+      expiryMs: nowMs + durationOrMsToMs(expiryDelta),
+    };
     const valueStr = JSON.stringify(toStore);
 
     globalThis.localStorage.setItem(this.key, valueStr);
   }
 
   /**
-   * Get the value of this item, or undefined if value is not set or expired.
+   * Example usage:
+   *
+   *   const { value, storedMs, expiryMs } = await myItem.getStoredItem();
    */
-  public get(): T | undefined {
+  public getStoredItem(): StoredItem<T> | undefined {
     const jsonStr = globalThis.localStorage.getItem(this.key);
 
     if (!jsonStr) {
-      return this.defaultValue;
+      return undefined;
     }
 
     try {
@@ -71,15 +80,17 @@ class CacheItem<T> {
         !obj ||
         typeof obj !== "object" ||
         !("value" in obj) ||
-        !("expireMs" in obj) ||
-        typeof obj.expireMs !== "number" ||
-        Date.now() >= obj.expireMs
+        !("storedMs" in obj) ||
+        typeof obj.storedMs !== "number" ||
+        !("expiryMs" in obj) ||
+        typeof obj.expiryMs !== "number" ||
+        Date.now() >= obj.expiryMs
       ) {
         this.remove();
-        return this.defaultValue;
+        return undefined;
       }
 
-      return obj.value;
+      return obj;
     } catch (e) {
       if (this.logError) {
         console.error(
@@ -88,8 +99,17 @@ class CacheItem<T> {
         );
       }
       this.remove();
-      return this.defaultValue;
+      return undefined;
     }
+  }
+
+  /**
+   * Get the value of this item, or undefined if value is not set or expired.
+   */
+  public get(): T | undefined {
+    const stored = this.getStoredItem();
+
+    return stored !== undefined ? stored.value : this.defaultValue;
   }
 
   /**
