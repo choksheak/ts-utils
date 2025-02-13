@@ -1,4 +1,4 @@
-import { Duration, durationToMs } from "./duration";
+import { Duration, durationOrMsToMs } from "./duration";
 
 export type StoredItem<T> = { value: T; expireMs: number };
 
@@ -27,8 +27,7 @@ export function storeItem<T>(
   logError = true,
   defaultValue?: T,
 ) {
-  const expireDeltaMs =
-    typeof expires === "number" ? expires : durationToMs(expires);
+  const expireDeltaMs = durationOrMsToMs(expires);
 
   return new CacheItem<T>(key, expireDeltaMs, logError, defaultValue);
 }

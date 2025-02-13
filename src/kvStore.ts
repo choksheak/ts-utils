@@ -11,6 +11,8 @@
  * Just use the `kvStore` global constant like the local storage.
  */
 
+import { Duration, durationOrMsToMs } from "./duration";
+
 // Updating the DB name will cause all old entries to be gone.
 const DEFAULT_DB_NAME = "KVStore";
 
@@ -171,14 +173,14 @@ export class KVStore {
   public async set<T>(
     key: string,
     value: T,
-    expiryDeltaMs: number = this.defaultExpiryDeltaMs,
+    expiryDeltaMs: number | Duration = this.defaultExpiryDeltaMs,
   ): Promise<T> {
     const nowMs = Date.now();
     const obj: StoredObject<T> = {
       key,
       value,
       storedMs: nowMs,
-      expiryMs: nowMs + expiryDeltaMs,
+      expiryMs: nowMs + durationOrMsToMs(expiryDeltaMs),
     };
 
     return await this.transact<T>(
@@ -434,7 +436,9 @@ class KvStoreItem<T> {
  */
 export function kvStoreItem<T>(
   key: string,
-  defaultExpiryDeltaMs: number,
+  defaultExpiration: number | Duration,
 ): KvStoreItem<T> {
+  const defaultExpiryDeltaMs = durationOrMsToMs(defaultExpiration);
+
   return new KvStoreItem<T>(key, defaultExpiryDeltaMs);
 }

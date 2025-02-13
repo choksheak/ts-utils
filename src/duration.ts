@@ -195,6 +195,13 @@ export function durationToMs(duration: Duration): number {
 }
 
 /**
+ * Convenience function to return a duration given an ms or Duration.
+ */
+export function durationOrMsToMs(duration: number | Duration): number {
+  return typeof duration === "number" ? duration : durationToMs(duration);
+}
+
+/**
  * Format a given Duration object into a string. If the object has no fields,
  * then returns an empty string.
  *
