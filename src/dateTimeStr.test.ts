@@ -4,6 +4,7 @@ import {
   getLongMonthNameZeroIndexed,
   getShortMonthNameOneIndexed,
   getShortMonthNameZeroIndexed,
+  hhMm,
   hhMmSs,
   hhMmSsMs,
   yyyyMm,
@@ -30,6 +31,14 @@ describe("DateTimeStr", () => {
 
     expect(yyyyMmDd(dt1, "/")).toBe("2024/04/06");
     expect(yyyyMmDd(dt2, "+*")).toBe("2024+*11+*12");
+  });
+
+  test("hhMm", () => {
+    expect(hhMm(dt1)).toBe("07:09");
+    expect(hhMm(dt2)).toBe("13:14");
+
+    expect(hhMm(dt1, "/")).toBe("07/09");
+    expect(hhMm(dt2, "+*")).toBe("13+*14");
   });
 
   test("hhMmSs", () => {

@@ -38,23 +38,28 @@ export function yyyyMmDd(dt = new Date(), separator = "-"): string {
 }
 
 /**
+ * Returns a date in hh:mm format. E.g. '01:02'.
+ *
+ * @param dt Specify a date object or default to the current date/time.
+ * @param separator Defaults to ':'.
+ */
+export function hhMm(dt = new Date(), separator = ":"): string {
+  const hr = dt.getHours();
+  const min = dt.getMinutes();
+
+  return (hr < 10 ? "0" + hr : hr) + separator + (min < 10 ? "0" + min : min);
+}
+
+/**
  * Returns a date in hh:mm:ss format. E.g. '01:02:03'.
  *
  * @param dt Specify a date object or default to the current date/time.
  * @param separator Defaults to ':'.
  */
 export function hhMmSs(dt = new Date(), separator = ":"): string {
-  const hr = dt.getHours();
-  const min = dt.getMinutes();
   const sec = dt.getSeconds();
 
-  return (
-    (hr < 10 ? "0" + hr : hr) +
-    separator +
-    (min < 10 ? "0" + min : min) +
-    separator +
-    (sec < 10 ? "0" + sec : sec)
-  );
+  return hhMm(dt, separator) + separator + (sec < 10 ? "0" + sec : sec);
 }
 
 /**
