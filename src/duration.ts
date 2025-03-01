@@ -242,3 +242,19 @@ export function readableDuration(
 
   return formatDuration(duration, options?.style);
 }
+
+/** A shortened duration string useful for logging timings. */
+export function elapsed(ms: number): string {
+  // Use long format for 1 minute or over.
+  if (ms > MS_PER_MINUTE) {
+    return readableDuration(ms);
+  }
+
+  // Use seconds format for over 100ms.
+  if (ms > 100) {
+    return `${(ms / 1000).toFixed(3)}s`;
+  }
+
+  // Use milliseconds format.
+  return ms + "ms";
+}
