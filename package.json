@@ -13,6 +13,7 @@
     "ci": "npm run lint && npm run format && npm run test",
     "build": "tsup src/*",
     "gen-types": "tsc --emitDeclarationOnly --declaration",
+    "docs": "rm -rf docs && typedoc `find src -name '*.ts' ! -name '*.test.ts'` --out docs --name 'Chok’s Typescript Utilities'",
     "pub": "scripts/publish.sh"
   },
   "devDependencies": {
@@ -30,6 +31,7 @@
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
     "tsup": "^8.3.5",
+    "typedoc": "^0.28.3",
     "typescript": "^5.4.5",
     "typescript-eslint": "^8.13.0"
   }

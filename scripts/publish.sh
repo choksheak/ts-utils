@@ -17,6 +17,10 @@ cp -r package.json LICENSE README.md src dist
 echo Remove test files
 rm dist/*.test.* dist/src/*.test.*
 
+echo Add docs
+npm run docs
+cp -r docs dist
+
 echo Publish
 cd dist
 npm publish --access=public
