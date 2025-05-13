@@ -5,9 +5,9 @@ import { sum } from "./sum";
  * and NaN as zero.
  */
 export function average(numbers: (number | null | undefined)[]): number {
-    if (numbers.length === 0) return 0;
+  if (numbers.length === 0) return 0;
 
-    const total = sum(numbers);
+  const total = sum(numbers);
 
-    return total / numbers.length;
+  return total / numbers.length;
 }
