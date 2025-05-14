@@ -1,11 +1,21 @@
 export type AnyDateTime = number | Date | string;
 
 /**
- * Convert a number (epoch milliseconds), string (parseable date/time), or
- * Date object (no conversion) into a Date object.
+ * Convert a number (epoch seconds or milliseconds), string (parseable
+ * date/time), or Date object (no conversion) into a Date object.
  */
 export function toDate(ts: AnyDateTime): Date {
-  if (typeof ts === "number" || typeof ts === "string") {
+  if (typeof ts === "number") {
+    // Handle timestamp in seconds (less than 12 digits long).
+    if (ts < 1_000_000_000_00) {
+      return new Date(ts * 1000);
+    }
+
+    // Handle timestamp in milliseconds.
+    return new Date(ts);
+  }
+
+  if (typeof ts === "string") {
     return new Date(ts);
   }
 
