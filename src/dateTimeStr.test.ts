@@ -7,6 +7,7 @@ import {
   hhMm,
   hhMmSs,
   hhMmSsMs,
+  toDate,
   yyyyMm,
   yyyyMmDd,
 } from "./dateTimeStr";
@@ -16,6 +17,16 @@ describe("DateTimeStr", () => {
   const dt2 = new Date(2024, 10, 12, 13, 14, 15, 16);
   const dt3 = new Date(2024, 11, 31, 20, 21, 22, 234);
   const enUS = new Intl.Locale("en-US");
+
+  test("toDate", () => {
+    expect(toDate(1747848676).toISOString()).toBe("2025-05-21T17:31:16.000Z");
+    expect(toDate("1747848676").toISOString()).toBe("2025-05-21T17:31:16.000Z");
+
+    expect(toDate(1747848676123).toISOString()).toBe("2025-05-21T17:31:16.123Z");
+    expect(toDate("1747848676123").toISOString()).toBe("2025-05-21T17:31:16.123Z");
+
+    expect(toDate(new Date(1747848676123)).toISOString()).toBe("2025-05-21T17:31:16.123Z");
+  });
 
   test("yyyyMm", () => {
     expect(yyyyMm(dt1)).toBe("2024-04");

@@ -1,8 +1,13 @@
 export type AnyDateTime = number | Date | string;
 
+function isAllDigits(str: string): boolean {
+  return /^\d+$/.test(str);
+}
+
 /**
  * Convert a number (epoch seconds or milliseconds), string (parseable
- * date/time), or Date object (no conversion) into a Date object.
+ * date/time or epoch seconds or milliseconds), or Date object (no conversion)
+ * into a Date object.
  */
 export function toDate(ts: AnyDateTime): Date {
   if (typeof ts === "number") {
@@ -16,6 +21,10 @@ export function toDate(ts: AnyDateTime): Date {
   }
 
   if (typeof ts === "string") {
+    if (isAllDigits(ts)) {
+      return toDate(Number(ts));
+    }
+
     return new Date(ts);
   }
 
