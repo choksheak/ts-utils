@@ -22,10 +22,16 @@ describe("DateTimeStr", () => {
     expect(toDate(1747848676).toISOString()).toBe("2025-05-21T17:31:16.000Z");
     expect(toDate("1747848676").toISOString()).toBe("2025-05-21T17:31:16.000Z");
 
-    expect(toDate(1747848676123).toISOString()).toBe("2025-05-21T17:31:16.123Z");
-    expect(toDate("1747848676123").toISOString()).toBe("2025-05-21T17:31:16.123Z");
+    expect(toDate(1747848676123).toISOString()).toBe(
+      "2025-05-21T17:31:16.123Z",
+    );
+    expect(toDate("1747848676123").toISOString()).toBe(
+      "2025-05-21T17:31:16.123Z",
+    );
 
-    expect(toDate(new Date(1747848676123)).toISOString()).toBe("2025-05-21T17:31:16.123Z");
+    expect(toDate(new Date(1747848676123)).toISOString()).toBe(
+      "2025-05-21T17:31:16.123Z",
+    );
   });
 
   test("yyyyMm", () => {
