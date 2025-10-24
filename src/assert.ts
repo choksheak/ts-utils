@@ -7,6 +7,8 @@ export function assert<T>(
   errorMessage?: string,
 ): asserts t is T {
   if (!t) {
-    throw new Error(errorMessage || `Assertion failed: ${JSON.stringify(t)} is falsy`);
+    throw new Error(
+      errorMessage || `Assertion failed: ${JSON.stringify(t)} is falsy`,
+    );
   }
 }
