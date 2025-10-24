@@ -4,9 +4,9 @@
  */
 export function assert<T>(
   t: T | null | undefined | "" | 0 | -0 | 0n | false | typeof NaN,
-  errorMessage: string,
+  errorMessage?: string,
 ): asserts t is T {
   if (!t) {
-    throw new Error(errorMessage);
+    throw new Error(errorMessage || `Assertion failed: ${JSON.stringify(t)} is falsy`);
   }
 }
