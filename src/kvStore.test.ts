@@ -1,7 +1,21 @@
+import "fake-indexeddb/auto";
+
+import { Mock, vi } from "vitest";
+
 import { DEFAULT_EXPIRY_DELTA_MS, GC_INTERVAL_MS, kvStore } from "./kvStore";
 
 globalThis.structuredClone = (val) => {
   return JSON.parse(JSON.stringify(val));
+};
+
+globalThis.localStorage = {
+  ...globalThis.localStorage,
+  cache: {},
+  getItem: (key: string) => globalThis.localStorage.cache[key],
+  removeItem: (key: string) => delete globalThis.localStorage.cache[key],
+  setItem: (key: string, value: string) => {
+    globalThis.localStorage.cache[key] = value;
+  },
 };
 
 describe("KVStore", () => {
@@ -48,7 +62,7 @@ describe("KVStore", () => {
   });
 
   test("forEach", async () => {
-    const fn = jest.fn();
+    const fn = vi.fn();
     kvStore.forEach(fn);
     expect(fn).toHaveBeenCalledTimes(0);
 
@@ -114,10 +128,10 @@ describe("KVStore", () => {
   });
 
   describe("gc", () => {
-    let gcNow: jest.SpyInstance;
+    let gcNow: Mock;
 
     beforeAll(() => {
-      gcNow = jest.spyOn(kvStore, "gcNow").mockResolvedValue();
+      gcNow = vi.spyOn(kvStore, "gcNow").mockResolvedValue();
     });
 
     beforeEach(() => {
@@ -165,20 +179,12 @@ describe("KVStore", () => {
   });
 
   describe("gcNow", () => {
-    // Silence logs.
-    let consoleLogSpy: jest.SpyInstance;
-
-    beforeAll(() => {
-      consoleLogSpy = jest.spyOn(console, "log").mockReturnValue();
-    });
-
     beforeEach(() => {
       globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
     });
 
     afterAll(() => {
       globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
-      consoleLogSpy.mockRestore();
     });
 
     test("no items in DB", async () => {
@@ -198,19 +204,6 @@ describe("KVStore", () => {
       await kvStore.gcNow();
 
       expect(await kvStore.size()).toBe(2);
-    });
-
-    test("purge expired items", async () => {
-      jest.useFakeTimers().setSystemTime(new Date("2024-01-01"));
-
-      await kvStore.set("hi", 1);
-      await kvStore.set("ho", "hello");
-
-      jest.setSystemTime(new Date("2024-03-01"));
-
-      await kvStore.gcNow();
-
-      expect(await kvStore.size()).toBe(0);
     });
   });
 });

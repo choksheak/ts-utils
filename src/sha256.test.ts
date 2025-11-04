@@ -1,11 +1,5 @@
-import { TextEncoder } from "util";
-Object.assign(global, { TextEncoder });
-
-import { webcrypto } from "crypto";
-Object.assign(global.crypto, { subtle: webcrypto.subtle });
-
-import { sha256 } from "./sha256";
 import { arrayBufferToBase64, arrayBufferToHex } from "./arrayBuffer";
+import { sha256 } from "./sha256";
 
 test("sha256", async () => {
   const arrayBuffer = await sha256("WCFudVE2H0");

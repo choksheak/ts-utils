@@ -8,13 +8,13 @@
  */
 
 import {
+  HOURS_PER_DAY,
+  MINUTES_PER_HOUR,
+  MS_PER_DAY,
+  MS_PER_HOUR,
+  MS_PER_MINUTE,
   MS_PER_SECOND,
   SECONDS_PER_MINUTE,
-  MINUTES_PER_HOUR,
-  HOURS_PER_DAY,
-  MS_PER_DAY,
-  MS_PER_MINUTE,
-  MS_PER_HOUR,
 } from "./timeConstants";
 
 export type Duration = {
