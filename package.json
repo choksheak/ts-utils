@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint .",
     "fix": "eslint . --fix",
-    "tsc": "npx tsc --noEmit --allowSyntheticDefaultImports",
+    "tsc": "npx tsc",
     "ft": "npm run fix && npm run tsc",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -34,11 +34,11 @@
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "echo Using `eslint --fix` will revert changes without printing errors!",
-      "eslint ."
+      "npm run lint"
     ],
     "*.{ts,tsx}": [
       "echo `tsc-files --noEmit` cannot read *.module.css files",
-      "npm run tsc"
+      "bash -c 'npx tsc'"
     ]
   },
   "repository": {
