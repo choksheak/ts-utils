@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 
 import { Mock, vi } from "vitest";
 
-import { DEFAULT_EXPIRY_DELTA_MS, GC_INTERVAL_MS, kvStore } from "./kvStore";
+import { kvStore, KvStoreConfig } from "./kvStore";
 
 globalThis.structuredClone = (val) => {
   return JSON.parse(JSON.stringify(val));
@@ -76,8 +76,10 @@ describe("KVStore", () => {
     expect(fn.mock.calls[0][1]).toBe(1);
 
     const expireMs = fn.mock.calls[0][2];
-    expect(expireMs).toBeGreaterThanOrEqual(startMs + DEFAULT_EXPIRY_DELTA_MS);
-    expect(expireMs).toBeLessThanOrEqual(endMs + DEFAULT_EXPIRY_DELTA_MS);
+    expect(expireMs).toBeGreaterThanOrEqual(
+      startMs + KvStoreConfig.expiryDeltaMs,
+    );
+    expect(expireMs).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
 
     // Should not be able to add duplicate keys.
     fn.mockClear();
@@ -93,8 +95,10 @@ describe("KVStore", () => {
 
     const expireMs2 = fn.mock.calls[0][2];
     expect(expireMs2).toBeGreaterThanOrEqual(expireMs);
-    expect(expireMs2).toBeGreaterThanOrEqual(startMs + DEFAULT_EXPIRY_DELTA_MS);
-    expect(expireMs2).toBeLessThanOrEqual(endMs + DEFAULT_EXPIRY_DELTA_MS);
+    expect(expireMs2).toBeGreaterThanOrEqual(
+      startMs + KvStoreConfig.expiryDeltaMs,
+    );
+    expect(expireMs2).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
 
     // Add a new key.
     fn.mockClear();
@@ -158,7 +162,7 @@ describe("KVStore", () => {
     test("not due yet", async () => {
       globalThis.localStorage.setItem(
         kvStore.gcMsStorageKey,
-        String(Date.now() - GC_INTERVAL_MS / 2),
+        String(Date.now() - KvStoreConfig.gcIntervalMs / 2),
       );
 
       await kvStore.gc();
@@ -169,7 +173,7 @@ describe("KVStore", () => {
     test("due to run", async () => {
       globalThis.localStorage.setItem(
         kvStore.gcMsStorageKey,
-        String(Date.now() - GC_INTERVAL_MS),
+        String(Date.now() - KvStoreConfig.gcIntervalMs),
       );
 
       await kvStore.gc();

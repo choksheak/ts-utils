@@ -12,26 +12,35 @@
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
+import { MS_PER_DAY } from "./timeConstants";
 
-// Updating the DB name will cause all old entries to be gone.
-const DEFAULT_DB_NAME = "KVStore";
+/** Global defaults can be updated directly. */
+export const KvStoreConfig = {
+  // Updating the DB name will cause all old entries to be gone.
+  dbName: "KVStore",
 
-// Updating the version will cause all old entries to be gone.
-const DEFAULT_DB_VERSION = 1;
+  // Updating the version will cause all old entries to be gone.
+  dbVersion: 1,
 
-// Use a constant store name to keep things simple.
-const STORE_NAME = "kvStore";
+  // Use a constant store name to keep things simple.
+  storeName: "kvStore",
 
-/** One day in milliseconds. */
-export const MILLIS_PER_DAY = 86_400_000;
+  /** 30 days in ms. */
+  expiryDeltaMs: MS_PER_DAY * 30,
 
-/** 30 days in ms. */
-export const DEFAULT_EXPIRY_DELTA_MS = MILLIS_PER_DAY * 30;
+  /** Do GC once per day. */
+  gcIntervalMs: MS_PER_DAY,
+};
 
-/** Do GC once per day. */
-export const GC_INTERVAL_MS = MILLIS_PER_DAY;
+export type KvStoreConfig = typeof KvStoreConfig;
 
-type StoredObject<T> = {
+/** Convenience function to update global defaults. */
+export function configureKvStore(config: Partial<KvStoreConfig>) {
+  Object.assign(KvStoreConfig, config);
+}
+
+export type KvStoredObject<T> = {
+  // The key is required by the ObjectStore.
   key: string;
   value: T;
   storedMs: number;
@@ -43,8 +52,8 @@ type StoredObject<T> = {
  * Throws an error if the string cannot be parsed as JSON.
  */
 function validateStoredObject<T>(
-  obj: StoredObject<T>,
-): StoredObject<T> | undefined {
+  obj: KvStoredObject<T>,
+): KvStoredObject<T> | undefined {
   if (
     !obj ||
     typeof obj !== "object" ||
@@ -76,30 +85,11 @@ function withOnError<T extends IDBRequest | IDBTransaction>(
   return request;
 }
 
-export class KVStoreField<T> {
-  public constructor(
-    public readonly store: KVStore,
-    public readonly key: string,
-  ) {}
-
-  public get(): Promise<T | undefined> {
-    return this.store.get(this.key);
-  }
-
-  public set(t: T): Promise<T> {
-    return this.store.set(this.key, t);
-  }
-
-  public delete(): Promise<void> {
-    return this.store.delete(this.key);
-  }
-}
-
 /**
- * You can create multiple KVStores if you want, but most likely you will only
+ * You can create multiple KvStores if you want, but most likely you will only
  * need to use the default `kvStore` instance.
  */
-export class KVStore {
+export class KvStore {
   // We'll init the DB only on first use.
   private db: IDBDatabase | undefined;
 
@@ -109,9 +99,10 @@ export class KVStore {
   public constructor(
     public readonly dbName: string,
     public readonly dbVersion: number,
-    public readonly defaultExpiryDeltaMs: number,
+    public readonly defaultExpiryDeltaMs = KvStoreConfig.expiryDeltaMs,
+    public readonly storeName = KvStoreConfig.storeName,
   ) {
-    this.gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${dbVersion}:${STORE_NAME}`;
+    this.gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${dbVersion}:${storeName}`;
   }
 
   private async getOrCreateDb() {
@@ -127,7 +118,7 @@ export class KVStore {
             .result;
 
           // Create the store on DB init.
-          const objectStore = db.createObjectStore(STORE_NAME, {
+          const objectStore = db.createObjectStore(this.storeName, {
             keyPath: "key",
           });
 
@@ -158,13 +149,16 @@ export class KVStore {
     const db = await this.getOrCreateDb();
 
     return await new Promise<T>((resolve, reject) => {
-      const transaction = withOnError(db.transaction(STORE_NAME, mode), reject);
+      const transaction = withOnError(
+        db.transaction(this.storeName, mode),
+        reject,
+      );
 
       transaction.onabort = (event) => {
         reject(event);
       };
 
-      const objectStore = transaction.objectStore(STORE_NAME);
+      const objectStore = transaction.objectStore(this.storeName);
 
       callback(objectStore, resolve, reject);
     });
@@ -176,7 +170,7 @@ export class KVStore {
     expiryDeltaMs: number | Duration = this.defaultExpiryDeltaMs,
   ): Promise<T> {
     const nowMs = Date.now();
-    const obj: StoredObject<T> = {
+    const obj: KvStoredObject<T> = {
       key,
       value,
       storedMs: nowMs,
@@ -219,8 +213,8 @@ export class KVStore {
 
   public async getStoredObject<T>(
     key: string,
-  ): Promise<StoredObject<T> | undefined> {
-    const stored = await this.transact<StoredObject<T> | undefined>(
+  ): Promise<KvStoredObject<T> | undefined> {
+    const stored = await this.transact<KvStoredObject<T> | undefined>(
       "readonly",
       (objectStore, resolve, reject) => {
         const request = withOnError(objectStore.get(key), reject);
@@ -280,10 +274,8 @@ export class KVStore {
         if (cursor) {
           if (cursor.key) {
             const obj = validateStoredObject(cursor.value);
-            if (obj) {
+            if (obj !== undefined) {
               await callback(String(cursor.key), obj.value, obj.expiryMs);
-            } else {
-              await callback(String(cursor.key), undefined, 0);
             }
           }
           cursor.continue();
@@ -343,7 +335,7 @@ export class KVStore {
       return;
     }
 
-    if (Date.now() < lastGcMs + GC_INTERVAL_MS) {
+    if (Date.now() < lastGcMs + KvStoreConfig.gcIntervalMs) {
       return; // not due for next GC yet
     }
 
@@ -381,8 +373,11 @@ export class KVStore {
   }
 
   /** Get an independent store item with a locked key and value type. */
-  public field<T>(key: string) {
-    return new KVStoreField<T>(this, key);
+  public getItem<T>(
+    key: string,
+    defaultExpiryDeltaMs?: number,
+  ): KvStoreItem<T> {
+    return new KvStoreItem<T>(key, defaultExpiryDeltaMs, this);
   }
 }
 
@@ -390,19 +385,19 @@ export class KVStore {
  * Default KV store ready for immediate use. You can create new instances if
  * you want, but most likely you will only need one store instance.
  */
-export const kvStore = new KVStore(
-  DEFAULT_DB_NAME,
-  DEFAULT_DB_VERSION,
-  DEFAULT_EXPIRY_DELTA_MS,
+export const kvStore = new KvStore(
+  KvStoreConfig.dbName,
+  KvStoreConfig.dbVersion,
+  KvStoreConfig.expiryDeltaMs,
 );
 
 /**
  * Class to represent one key in the store with a default expiration.
  */
-class KvStoreItem<T> {
+export class KvStoreItem<T> {
   public constructor(
     public readonly key: string,
-    public readonly defaultExpiryDeltaMs: number,
+    public readonly defaultExpiryDeltaMs?: number,
     public readonly store = kvStore,
   ) {}
 
@@ -411,7 +406,7 @@ class KvStoreItem<T> {
    *
    *   const { value, storedMs, expiryMs } = await myKvItem.getStoredObject();
    */
-  public async getStoredObject(): Promise<StoredObject<T> | undefined> {
+  public async getStoredObject(): Promise<KvStoredObject<T> | undefined> {
     return await this.store.getStoredObject(this.key);
   }
 
@@ -421,7 +416,7 @@ class KvStoreItem<T> {
 
   public async set(
     value: T,
-    expiryDeltaMs: number = this.defaultExpiryDeltaMs,
+    expiryDeltaMs: number | undefined = this.defaultExpiryDeltaMs,
   ): Promise<void> {
     await this.store.set(this.key, value, expiryDeltaMs);
   }
@@ -432,13 +427,20 @@ class KvStoreItem<T> {
 }
 
 /**
- * Create a KV store item with a key and a default expiration.
+ * Create a KV store item with a key and a default expiration. This is
+ * basically similar to using `kvStore.getItem(key, defaultExpiration)`, but is
+ * mostly a shorthand for usages using each key independently as a top level
+ * object.
  */
 export function kvStoreItem<T>(
   key: string,
-  defaultExpiration: number | Duration,
+  defaultExpiration?: number | Duration,
+  store = kvStore,
 ): KvStoreItem<T> {
-  const defaultExpiryDeltaMs = durationOrMsToMs(defaultExpiration);
+  const defaultExpiryDeltaMs =
+    defaultExpiration !== undefined
+      ? durationOrMsToMs(defaultExpiration)
+      : undefined;
 
-  return new KvStoreItem<T>(key, defaultExpiryDeltaMs);
+  return new KvStoreItem<T>(key, defaultExpiryDeltaMs, store);
 }
