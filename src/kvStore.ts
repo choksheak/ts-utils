@@ -15,6 +15,7 @@
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
+import { FullStorageAdapter, StoredObject } from "./storageAdapter";
 import { MS_PER_DAY } from "./timeConstants";
 
 /** Global defaults can be updated directly. */
@@ -52,12 +53,9 @@ export function configureKvStore(config: Partial<KvStoreConfig>) {
 }
 
 /** Type to represent a full object with metadata stored in the store. */
-export type KvStoredObject<T> = {
+export type KvStoredObject<T> = StoredObject<T> & {
   // The key is required by the ObjectStore.
   key: string;
-  value: T;
-  storedMs: number;
-  expiryMs: number;
 };
 
 /**
@@ -98,7 +96,11 @@ function withOnError<T extends IDBRequest | IDBTransaction>(
  * You can create multiple KvStores if you want, but most likely you will only
  * need to use the default `kvStore` instance.
  */
-export class KvStore {
+// Using `any` because the store could store any type of data for each key,
+// but the caller can specify a more specific type when calling each of the
+// methods.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class KvStore implements FullStorageAdapter<any> {
   /** We'll init the DB only on first use. */
   private db: IDBDatabase | undefined;
 
@@ -329,7 +331,7 @@ export class KvStore {
    * requires iterating through the entire store because the items could expire
    * at any time, and hence the size is a dynamic number.
    */
-  public async size() {
+  public async size(): Promise<number> {
     let count = 0;
     await this.forEach(() => {
       count++;
@@ -338,7 +340,7 @@ export class KvStore {
   }
 
   /** Remove all items from the store. */
-  public async clear() {
+  public async clear(): Promise<void> {
     const keys: string[] = [];
     await this.forEach((key) => {
       keys.push(key);
@@ -352,10 +354,8 @@ export class KvStore {
    * The type T is applied to all values, even though they might not be of type
    * T (in the case when you store different data types in the same store).
    */
-  public async asMap<T>(): Promise<
-    Map<string, Omit<KvStoredObject<T>, "key">>
-  > {
-    const map = new Map<string, Omit<KvStoredObject<T>, "key">>();
+  public async asMap<T>(): Promise<Map<string, StoredObject<T>>> {
+    const map = new Map<string, StoredObject<T>>();
     await this.forEach((key, value, expiryMs, storedMs) => {
       map.set(key, { value: value as T, expiryMs, storedMs });
     });
@@ -377,7 +377,7 @@ export class KvStore {
   }
 
   /** Perform garbage-collection if due, else do nothing. */
-  public async gc() {
+  public async gc(): Promise<void> {
     const lastGcMs = this.lastGcMs;
 
     // Set initial timestamp - no need GC now.
@@ -398,7 +398,7 @@ export class KvStore {
    * Perform garbage collection immediately without checking whether we are
    * due for the next GC or not.
    */
-  public async gcNow() {
+  public async gcNow(): Promise<void> {
     console.log(`Starting kvStore GC on ${this.dbName} v${this.dbVersion}...`);
 
     // Prevent concurrent GC runs.

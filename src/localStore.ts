@@ -15,6 +15,7 @@
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
+import { FullStorageAdapter, StoredObject } from "./storageAdapter";
 import { MS_PER_DAY } from "./timeConstants";
 
 /** Global defaults can be updated directly. */
@@ -36,20 +37,13 @@ export function configureLocalStore(config: Partial<LocalStoreConfig>) {
   Object.assign(LocalStoreConfig, config);
 }
 
-/** Type to represent a full object with metadata stored in the store. */
-export type LocalStoredObject<T> = {
-  value: T;
-  storedMs: number;
-  expiryMs: number;
-};
-
 /**
  * Parse a stored value string. Returns undefined if invalid or expired.
  * Throws an error if the string cannot be parsed as JSON.
  */
 function validateStoredObject<T>(
-  obj: LocalStoredObject<T>,
-): LocalStoredObject<T> | undefined {
+  obj: StoredObject<T>,
+): StoredObject<T> | undefined {
   if (
     !obj ||
     typeof obj !== "object" ||
@@ -68,7 +62,11 @@ function validateStoredObject<T>(
  * You can create multiple LocalStores if you want, but most likely you will only
  * need to use the default `localStore` instance.
  */
-export class LocalStore {
+// Using `any` because the store could store any type of data for each key,
+// but the caller can specify a more specific type when calling each of the
+// methods.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export class LocalStore implements FullStorageAdapter<any> {
   /**
    * The prefix string for the local storage key which identifies items
    * belonging to this namespace.
@@ -108,7 +106,7 @@ export class LocalStore {
     expiryDeltaMs: number | Duration = this.defaultExpiryMs,
   ): T {
     const nowMs = Date.now();
-    const obj: LocalStoredObject<T> = {
+    const obj: StoredObject<T> = {
       value,
       storedMs: nowMs,
       expiryMs: nowMs + durationOrMsToMs(expiryDeltaMs),
@@ -133,7 +131,7 @@ export class LocalStore {
   }
 
   /** Mainly used to get the expiration timestamp of an object. */
-  public getStoredObject<T>(key: string): LocalStoredObject<T> | undefined {
+  public getStoredObject<T>(key: string): StoredObject<T> | undefined {
     const k = this.keyPrefix + key;
     const stored = localStorage.getItem(k);
 
@@ -152,7 +150,7 @@ export class LocalStore {
         return undefined;
       }
 
-      return obj as LocalStoredObject<T>;
+      return obj as StoredObject<T>;
     } catch (e) {
       console.error(`Invalid local value: ${k}=${stored}:`, e);
       this.delete(k);
@@ -220,8 +218,8 @@ export class LocalStore {
    * The type T is applied to all values, even though they might not be of type
    * T (in the case when you store different data types in the same store).
    */
-  public asMap<T>(): Map<string, LocalStoredObject<T>> {
-    const map = new Map<string, LocalStoredObject<T>>();
+  public asMap<T>(): Map<string, StoredObject<T>> {
+    const map = new Map<string, StoredObject<T>>();
     this.forEach((key, value, expiryMs, storedMs) => {
       map.set(key, { value: value as T, expiryMs, storedMs });
     });
@@ -243,7 +241,7 @@ export class LocalStore {
   }
 
   /** Perform garbage-collection if due, else do nothing. */
-  public gc() {
+  public gc(): void {
     const lastGcMs = this.lastGcMs;
 
     // Set initial timestamp - no need GC now.
@@ -264,7 +262,7 @@ export class LocalStore {
    * Perform garbage collection immediately without checking whether we are
    * due for the next GC or not.
    */
-  public gcNow() {
+  public gcNow(): void {
     console.log(`Starting localStore GC on ${this.storeName}`);
 
     // Prevent concurrent GC runs.
@@ -321,7 +319,7 @@ export class LocalStoreItem<T> {
    *   const { value, storedMs, expiryMs, storedMs } =
    *     await myLocalItem.getStoredObject();
    */
-  public getStoredObject(): LocalStoredObject<T> | undefined {
+  public getStoredObject(): StoredObject<T> | undefined {
     return this.store.getStoredObject(this.key);
   }
 
