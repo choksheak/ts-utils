@@ -1,9 +1,8 @@
-import { LocalStorage } from "node-localstorage";
+import "mock-local-storage";
+
 import { Mock, vi } from "vitest";
 
 import { localStore, LocalStoreConfig } from "./localStore";
-
-global.localStorage = new LocalStorage("./scratch");
 
 describe("localStore", () => {
   beforeEach(() => {

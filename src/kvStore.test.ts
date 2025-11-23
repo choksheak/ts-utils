@@ -1,11 +1,9 @@
 import "fake-indexeddb/auto";
+import "mock-local-storage";
 
-import { LocalStorage } from "node-localstorage";
 import { Mock, vi } from "vitest";
 
 import { kvStore, KvStoreConfig } from "./kvStore";
-
-global.localStorage = new LocalStorage("./scratch");
 
 describe("KVStore", () => {
   beforeEach(async () => {
