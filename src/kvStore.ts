@@ -15,7 +15,11 @@
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
-import { FullStorageAdapter, StoredObject } from "./storageAdapter";
+import {
+  FullStorageAdapter,
+  StorageAdapter,
+  StoredObject,
+} from "./storageAdapter";
 import { MS_PER_DAY } from "./timeConstants";
 
 /** Global defaults can be updated directly. */
@@ -424,6 +428,11 @@ export class KvStore implements FullStorageAdapter<any> {
 
     // Mark the end time as last GC time.
     this.lastGcMs = Date.now();
+  }
+
+  /** Returns `this` casted into a StorageAdapter<T>. */
+  public asStorageAdapter<T>(): StorageAdapter<T> {
+    return this as StorageAdapter<T>;
   }
 }
 
