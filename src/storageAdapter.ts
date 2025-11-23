@@ -21,8 +21,11 @@ export type StoredObject<T> = {
 /**
  * Full interface for a storage implementation. Each method can be either sync
  * or async, and the interface works with either implementation scheme.
+ *
+ * Note: We are using `interface` instead of `type ... &` because typedoc
+ * cannot handle the `&` syntax to merge types.
  */
-export type FullStorageAdapter<T> = StorageAdapter<T> & {
+export interface FullStorageAdapter<T> extends StorageAdapter<T> {
   // Redefining `set()`, but with an optional expiration parameter.
   set: (
     key: string,
@@ -52,4 +55,4 @@ export type FullStorageAdapter<T> = StorageAdapter<T> & {
   gc: () => Promise<void> | void;
 
   gcNow: () => Promise<void> | void;
-};
+}
