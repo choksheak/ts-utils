@@ -1,48 +1,46 @@
-import "fake-indexeddb/auto";
-
 import { LocalStorage } from "node-localstorage";
 import { Mock, vi } from "vitest";
 
-import { kvStore, KvStoreConfig } from "./kvStore";
+import { localStore, LocalStoreConfig } from "./localStore";
 
 global.localStorage = new LocalStorage("./scratch");
 
-describe("KVStore", () => {
-  beforeEach(async () => {
-    await kvStore.clear();
+describe("localStore", () => {
+  beforeEach(() => {
+    localStore.clear();
   });
 
-  afterAll(async () => {
-    await kvStore.clear();
+  afterAll(() => {
+    localStore.clear();
   });
 
   test("get, set, delete", async () => {
-    expect(await kvStore.get("hi")).toBe(undefined);
-    expect(await kvStore.set("hi", 1)).toBe(1);
-    expect(await kvStore.get("hi")).toBe(1);
-    expect(await kvStore.delete("hi")).toBe(undefined);
-    expect(await kvStore.get("hi")).toBe(undefined);
+    expect(localStore.get("hi")).toBe(undefined);
+    expect(localStore.set("hi", 1)).toBe(1);
+    expect(localStore.get("hi")).toBe(1);
+    expect(localStore.delete("hi")).toBe(undefined);
+    expect(localStore.get("hi")).toBe(undefined);
   });
 
   test("get and set objects", async () => {
-    expect(await kvStore.set("hi", "ho")).toBe("ho");
-    expect(await kvStore.get("hi")).toBe("ho");
+    expect(localStore.set("hi", "ho")).toBe("ho");
+    expect(localStore.get("hi")).toBe("ho");
 
-    expect(await kvStore.set("hi", true)).toBe(true);
-    expect(await kvStore.get("hi")).toBe(true);
+    expect(localStore.set("hi", true)).toBe(true);
+    expect(localStore.get("hi")).toBe(true);
 
-    expect(await kvStore.set("hi", null)).toBe(null);
-    expect(await kvStore.get("hi")).toBe(null);
+    expect(localStore.set("hi", null)).toBe(null);
+    expect(localStore.get("hi")).toBe(null);
 
-    expect(await kvStore.set("hi", undefined)).toBe(undefined);
-    expect(await kvStore.get("hi")).toBe(undefined);
+    expect(localStore.set("hi", undefined)).toBe(undefined);
+    expect(localStore.get("hi")).toBe(undefined);
 
     const ms1 = Date.now();
 
-    expect(await kvStore.set("hi", { a: 1 })).toEqual({ a: 1 });
-    expect(await kvStore.get("hi")).toEqual({ a: 1 });
+    expect(localStore.set("hi", { a: 1 })).toEqual({ a: 1 });
+    expect(localStore.get("hi")).toEqual({ a: 1 });
 
-    const stored = await kvStore.getStoredObject("hi");
+    const stored = localStore.getStoredObject("hi");
     const ms2 = Date.now();
 
     expect(stored?.value).toEqual({ a: 1 });
@@ -52,13 +50,13 @@ describe("KVStore", () => {
 
   test("forEach", async () => {
     const fn = vi.fn();
-    kvStore.forEach(fn);
+    localStore.forEach(fn);
     expect(fn).toHaveBeenCalledTimes(0);
 
     let startMs = Date.now();
-    await kvStore.set("hi", 1);
+    localStore.set("hi", 1);
     let endMs = Date.now();
-    await kvStore.forEach(fn);
+    localStore.forEach(fn);
 
     expect(fn).toHaveBeenCalledTimes(1);
     expect(fn.mock.calls[0][0]).toBe("hi");
@@ -66,17 +64,19 @@ describe("KVStore", () => {
 
     const expireMs = fn.mock.calls[0][2];
     expect(expireMs).toBeGreaterThanOrEqual(
-      startMs + KvStoreConfig.expiryDeltaMs,
+      startMs + LocalStoreConfig.expiryDeltaMs,
     );
-    expect(expireMs).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
+    expect(expireMs).toBeLessThanOrEqual(
+      endMs + LocalStoreConfig.expiryDeltaMs,
+    );
 
     // Should not be able to add duplicate keys.
     fn.mockClear();
 
     startMs = Date.now();
-    await kvStore.set("hi", 2);
+    localStore.set("hi", 2);
     endMs = Date.now();
-    await kvStore.forEach(fn);
+    localStore.forEach(fn);
 
     expect(fn).toHaveBeenCalledTimes(1);
     expect(fn.mock.calls[0][0]).toBe("hi");
@@ -85,17 +85,19 @@ describe("KVStore", () => {
     const expireMs2 = fn.mock.calls[0][2];
     expect(expireMs2).toBeGreaterThanOrEqual(expireMs);
     expect(expireMs2).toBeGreaterThanOrEqual(
-      startMs + KvStoreConfig.expiryDeltaMs,
+      startMs + LocalStoreConfig.expiryDeltaMs,
     );
-    expect(expireMs2).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
+    expect(expireMs2).toBeLessThanOrEqual(
+      endMs + LocalStoreConfig.expiryDeltaMs,
+    );
 
     // Add a new key.
     fn.mockClear();
 
     startMs = Date.now();
-    await kvStore.set("ho", { b: 2 });
+    localStore.set("ho", { b: 2 });
     endMs = Date.now();
-    await kvStore.forEach(fn);
+    localStore.forEach(fn);
 
     expect(fn).toHaveBeenCalledTimes(2);
     expect(fn.mock.calls[0][0]).toBe("hi");
@@ -105,43 +107,43 @@ describe("KVStore", () => {
   });
 
   test("size", async () => {
-    expect(await kvStore.size()).toBe(0);
+    expect(localStore.size()).toBe(0);
 
-    await kvStore.set("hi", 1);
+    localStore.set("hi", 1);
 
-    expect(await kvStore.size()).toBe(1);
+    expect(localStore.size()).toBe(1);
 
-    await kvStore.set("hi", 2);
+    localStore.set("hi", 2);
 
-    expect(await kvStore.size()).toBe(1);
+    expect(localStore.size()).toBe(1);
 
-    await kvStore.set("ho", { b: 3 });
+    localStore.set("ho", { b: 3 });
 
-    expect(await kvStore.size()).toBe(2);
+    expect(localStore.size()).toBe(2);
   });
 
   describe("gc", () => {
     let gcNow: Mock;
 
     beforeAll(() => {
-      gcNow = vi.spyOn(kvStore, "gcNow").mockResolvedValue();
+      gcNow = vi.spyOn(localStore, "gcNow").mockResolvedValue();
     });
 
     beforeEach(() => {
-      globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
+      globalThis.localStorage.removeItem(localStore.gcMsStorageKey);
     });
 
     afterAll(() => {
-      globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
+      globalThis.localStorage.removeItem(localStore.gcMsStorageKey);
       gcNow.mockRestore();
     });
 
     test("set initial timestamp", async () => {
       const startMs = Date.now();
-      await kvStore.gc();
+      localStore.gc();
       const endMs = Date.now();
 
-      const lastGcMs = kvStore.lastGcMs;
+      const lastGcMs = localStore.lastGcMs;
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
 
@@ -150,22 +152,22 @@ describe("KVStore", () => {
 
     test("not due yet", async () => {
       globalThis.localStorage.setItem(
-        kvStore.gcMsStorageKey,
-        String(Date.now() - KvStoreConfig.gcIntervalMs / 2),
+        localStore.gcMsStorageKey,
+        String(Date.now() - LocalStoreConfig.gcIntervalMs / 2),
       );
 
-      await kvStore.gc();
+      localStore.gc();
 
       expect(gcNow).toHaveBeenCalledTimes(0);
     });
 
     test("due to run", async () => {
       globalThis.localStorage.setItem(
-        kvStore.gcMsStorageKey,
-        String(Date.now() - KvStoreConfig.gcIntervalMs),
+        localStore.gcMsStorageKey,
+        String(Date.now() - LocalStoreConfig.gcIntervalMs),
       );
 
-      await kvStore.gc();
+      localStore.gc();
 
       expect(gcNow).toHaveBeenCalledTimes(1);
     });
@@ -173,30 +175,32 @@ describe("KVStore", () => {
 
   describe("gcNow", () => {
     beforeEach(() => {
-      globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
+      globalThis.localStorage.removeItem(localStore.gcMsStorageKey);
     });
 
     afterAll(() => {
-      globalThis.localStorage.removeItem(kvStore.gcMsStorageKey);
+      globalThis.localStorage.removeItem(localStore.gcMsStorageKey);
     });
 
     test("no items in DB", async () => {
       const startMs = Date.now();
-      await kvStore.gcNow();
+      localStore.gcNow();
       const endMs = Date.now();
 
-      const lastGcMs = kvStore.lastGcMs;
+      const lastGcMs = localStore.lastGcMs;
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
     });
 
     test("nothing to purge", async () => {
-      await kvStore.set("hi", 1);
-      await kvStore.set("ho", "hello");
+      localStore.set("hi", 1);
+      localStore.set("ho", "hello");
 
-      await kvStore.gcNow();
+      expect(localStore.size()).toBe(2);
 
-      expect(await kvStore.size()).toBe(2);
+      localStore.gcNow();
+
+      expect(localStore.size()).toBe(2);
     });
   });
 });

@@ -256,12 +256,8 @@ export class KvStore {
     return obj?.value;
   }
 
-  public async forEach(
-    callback: (
-      key: string,
-      value: unknown,
-      expiryMs: number,
-    ) => void | Promise<void>,
+  public async forEach<T>(
+    callback: (key: string, value: T, expiryMs: number) => void | Promise<void>,
   ): Promise<void> {
     await this.transact<void>("readonly", (objectStore, resolve, reject) => {
       const request = withOnError(objectStore.openCursor(), reject);
@@ -275,7 +271,7 @@ export class KvStore {
           if (cursor.key) {
             const obj = validateStoredObject(cursor.value);
             if (obj !== undefined) {
-              await callback(String(cursor.key), obj.value, obj.expiryMs);
+              await callback(String(cursor.key), obj.value as T, obj.expiryMs);
             }
           }
           cursor.continue();
