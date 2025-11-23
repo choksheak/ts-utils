@@ -2,13 +2,16 @@
  * Local storage key-value store with support for auto-expirations.
  *
  * Why use this?
- * 1. No need to worry about running out of storage.
- * 2. Extremely simple interface to use local storage.
- * 3. Auto-expirations frees you from worrying about data clean-up.
- * 4. Any serializable data type can be stored (except undefined).
+ * 1. Extremely simple interface to use local storage.
+ * 2. Auto-expirations with GC frees you from worrying about data clean-up.
+ * 3. Any serializable data type can be stored (except undefined).
  *
  * How to use?
  * Just use the `localStore` global constant like the local storage.
+ *
+ * Why not use the localStorage directly?
+ * localStorage does not provide auto-expirations with GC. If you don't need
+ * this (items never expire), then just use localStorage directly.
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
@@ -20,7 +23,7 @@ export const LocalStoreConfig = {
   storeName: "ts-utils",
 
   /** 30 days in ms. */
-  expiryDeltaMs: MS_PER_DAY * 30,
+  expiryMs: MS_PER_DAY * 30,
 
   /** Do GC once per day. */
   gcIntervalMs: MS_PER_DAY,
@@ -33,6 +36,7 @@ export function configureLocalStore(config: Partial<LocalStoreConfig>) {
   Object.assign(LocalStoreConfig, config);
 }
 
+/** Type to represent a full object with metadata stored in the store. */
 export type LocalStoredObject<T> = {
   value: T;
   storedMs: number;
@@ -49,11 +53,8 @@ function validateStoredObject<T>(
   if (
     !obj ||
     typeof obj !== "object" ||
-    !("value" in obj) ||
-    !("storedMs" in obj) ||
-    typeof obj.storedMs !== "number" ||
     obj.value === undefined ||
-    !("expiryMs" in obj) ||
+    typeof obj.storedMs !== "number" ||
     typeof obj.expiryMs !== "number" ||
     Date.now() >= obj.expiryMs
   ) {
@@ -77,18 +78,34 @@ export class LocalStore {
   /** Local storage key name for the last GC completed timestamp. */
   public readonly gcMsStorageKey: string;
 
+  public readonly defaultExpiryMs: number;
+  public readonly gcIntervalMs: number;
+
   public constructor(
     public readonly storeName: string,
-    public readonly defaultExpiryDeltaMs = LocalStoreConfig.expiryDeltaMs,
+    options?: {
+      defaultExpiryMs?: number | Duration;
+      gcIntervalMs?: number | Duration;
+    },
   ) {
     this.keyPrefix = storeName + ":";
+
+    this.defaultExpiryMs = options?.defaultExpiryMs
+      ? durationOrMsToMs(options.defaultExpiryMs)
+      : LocalStoreConfig.expiryMs;
+
+    this.gcIntervalMs = options?.gcIntervalMs
+      ? durationOrMsToMs(options.gcIntervalMs)
+      : LocalStoreConfig.gcIntervalMs;
+
     this.gcMsStorageKey = `__localStore:lastGcMs:${storeName}`;
   }
 
+  /** Set a value in the store. */
   public set<T>(
     key: string,
     value: T,
-    expiryDeltaMs: number | Duration = this.defaultExpiryDeltaMs,
+    expiryDeltaMs: number | Duration = this.defaultExpiryMs,
   ): T {
     const nowMs = Date.now();
     const obj: LocalStoredObject<T> = {
@@ -98,6 +115,8 @@ export class LocalStore {
     };
 
     localStorage.setItem(this.keyPrefix + key, JSON.stringify(obj));
+
+    this.gc(); // check GC on every write
 
     return value;
   }
@@ -135,7 +154,7 @@ export class LocalStore {
 
       return obj as LocalStoredObject<T>;
     } catch (e) {
-      console.error(`Invalid local value: ${k}=${JSON.stringify(stored)}:`, e);
+      console.error(`Invalid local value: ${k}=${stored}:`, e);
       this.delete(k);
 
       this.gc(); // check GC on every read of an invalid key
@@ -144,43 +163,51 @@ export class LocalStore {
     }
   }
 
+  /** Get a value by key, or undefined if it does not exist. */
   public get<T>(key: string): T | undefined {
     const obj = this.getStoredObject<T>(key);
 
     return obj?.value;
   }
 
-  public async forEach<T>(
-    callback: (key: string, value: T, expiryMs: number) => void,
-  ): Promise<void> {
+  /** Generic way to iterate through all entries. */
+  public forEach<T>(
+    callback: (
+      key: string,
+      value: T,
+      expiryMs: number,
+      storedMs: number,
+    ) => void,
+  ): void {
     for (const k of Object.keys(localStorage)) {
       if (!k.startsWith(this.keyPrefix)) continue;
 
-      const v = localStorage.getItem(k);
-      if (!v) continue;
+      const key = k.slice(this.keyPrefix.length);
+      const obj = this.getStoredObject(key);
 
-      const parsed = JSON.parse(v);
-      const obj = validateStoredObject(parsed);
-      if (obj === undefined) {
-        localStorage.removeItem(k);
-        continue;
-      }
+      if (!obj) continue;
 
-      callback(k.slice(this.keyPrefix.length), obj.value as T, obj.expiryMs);
+      callback(key, obj.value as T, obj.expiryMs, obj.storedMs);
     }
   }
 
+  /**
+   * Returns the number of items in the store. Note that getting the size
+   * requires iterating through the entire store because the items could expire
+   * at any time, and hence the size is a dynamic number.
+   */
   public size(): number {
     let count = 0;
-    for (const key of Object.keys(localStorage)) {
-      if (key.startsWith(this.keyPrefix)) {
-        count++;
-      }
-    }
+    this.forEach(() => {
+      count++;
+    });
     return count;
   }
 
+  /** Remove all items from the store. */
   public clear(): void {
+    // Note that we don't need to use this.forEach() because we are just
+    // going to delete all the items without checking for expiration.
     for (const key of Object.keys(localStorage)) {
       if (key.startsWith(this.keyPrefix)) {
         localStorage.removeItem(key);
@@ -188,15 +215,20 @@ export class LocalStore {
     }
   }
 
-  /** Mainly for debugging dumps. */
-  public asMap(): Map<string, unknown> {
-    const map = new Map<string, unknown>();
-    this.forEach((key, value, expiryMs) => {
-      map.set(key, { value, expiryMs });
+  /**
+   * Returns all items as map of key to value, mainly used for debugging dumps.
+   * The type T is applied to all values, even though they might not be of type
+   * T (in the case when you store different data types in the same store).
+   */
+  public asMap<T>(): Map<string, LocalStoredObject<T>> {
+    const map = new Map<string, LocalStoredObject<T>>();
+    this.forEach((key, value, expiryMs, storedMs) => {
+      map.set(key, { value: value as T, expiryMs, storedMs });
     });
     return map;
   }
 
+  /** Returns the ms timestamp for the last GC (garbage collection). */
   public get lastGcMs(): number {
     const lastGcMsStr = globalThis.localStorage.getItem(this.gcMsStorageKey);
     if (!lastGcMsStr) return 0;
@@ -205,11 +237,12 @@ export class LocalStore {
     return isNaN(ms) ? 0 : ms;
   }
 
+  /** Set the ms timestamp for the last GC (garbage collection). */
   public set lastGcMs(ms: number) {
     globalThis.localStorage.setItem(this.gcMsStorageKey, String(ms));
   }
 
-  /** Perform garbage-collection if due. */
+  /** Perform garbage-collection if due, else do nothing. */
   public gc() {
     const lastGcMs = this.lastGcMs;
 
@@ -219,7 +252,7 @@ export class LocalStore {
       return;
     }
 
-    if (Date.now() < lastGcMs + LocalStoreConfig.gcIntervalMs) {
+    if (Date.now() < lastGcMs + this.gcIntervalMs) {
       return; // not due for next GC yet
     }
 
@@ -227,7 +260,10 @@ export class LocalStore {
     this.gcNow();
   }
 
-  /** Perform garbage-collection immediately without checking. */
+  /**
+   * Perform garbage collection immediately without checking whether we are
+   * due for the next GC or not.
+   */
   public gcNow() {
     console.log(`Starting localStore GC on ${this.storeName}`);
 
@@ -249,75 +285,64 @@ export class LocalStore {
     // Mark the end time as last GC time.
     this.lastGcMs = Date.now();
   }
-
-  /** Get an independent store item with a locked key and value type. */
-  public getItem<T>(
-    key: string,
-    defaultExpiryDeltaMs?: number,
-  ): LocalStoreItem<T> {
-    return new LocalStoreItem<T>(key, defaultExpiryDeltaMs, this);
-  }
 }
 
 /**
  * Default local store ready for immediate use. You can create new instances if
  * you want, but most likely you will only need one store instance.
  */
-export const localStore = new LocalStore(
-  LocalStoreConfig.storeName,
-  LocalStoreConfig.expiryDeltaMs,
-);
+export const localStore = new LocalStore(LocalStoreConfig.storeName);
 
 /**
  * Class to represent one key in the store with a default expiration.
  */
 export class LocalStoreItem<T> {
+  public readonly defaultExpiryMs: number;
+
   public constructor(
     public readonly key: string,
-    public readonly defaultExpiryDeltaMs?: number,
+    defaultExpiryMs: number | Duration = LocalStoreConfig.expiryMs,
     public readonly store = localStore,
-  ) {}
+  ) {
+    this.defaultExpiryMs = defaultExpiryMs && durationOrMsToMs(defaultExpiryMs);
+  }
+
+  /** Set a value in the store. */
+  public set(
+    value: T,
+    expiryDeltaMs: number | undefined = this.defaultExpiryMs,
+  ): void {
+    this.store.set(this.key, value, expiryDeltaMs);
+  }
 
   /**
    * Example usage:
    *
-   *   const { value, storedMs, expiryMs } = await myLocalItem.getStoredObject();
+   *   const { value, storedMs, expiryMs, storedMs } =
+   *     await myLocalItem.getStoredObject();
    */
   public getStoredObject(): LocalStoredObject<T> | undefined {
     return this.store.getStoredObject(this.key);
   }
 
+  /** Get a value by key, or undefined if it does not exist. */
   public get(): T | undefined {
     return this.store.get(this.key);
   }
 
-  public set(
-    value: T,
-    expiryDeltaMs: number | undefined = this.defaultExpiryDeltaMs,
-  ): void {
-    this.store.set(this.key, value, expiryDeltaMs);
-  }
-
+  /** Delete this key from the store. */
   public delete(): void {
     this.store.delete(this.key);
   }
 }
 
-/**
- * Create a local store item with a key and a default expiration. This is
- * basically similar to using `localStore.getItem(key, defaultExpiration)`, but is
- * mostly a shorthand for usages using each key independently as a top level
- * object.
- */
+/** Create a local store item with a key and a default expiration. */
 export function localStoreItem<T>(
   key: string,
-  defaultExpiration?: number | Duration,
+  expiryMs?: number | Duration,
   store = localStore,
 ): LocalStoreItem<T> {
-  const defaultExpiryDeltaMs =
-    defaultExpiration !== undefined
-      ? durationOrMsToMs(defaultExpiration)
-      : undefined;
+  expiryMs = expiryMs && durationOrMsToMs(expiryMs);
 
-  return new LocalStoreItem<T>(key, defaultExpiryDeltaMs, store);
+  return new LocalStoreItem<T>(key, expiryMs, store);
 }

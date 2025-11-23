@@ -64,11 +64,9 @@ describe("localStore", () => {
 
     const expireMs = fn.mock.calls[0][2];
     expect(expireMs).toBeGreaterThanOrEqual(
-      startMs + LocalStoreConfig.expiryDeltaMs,
+      startMs + LocalStoreConfig.expiryMs,
     );
-    expect(expireMs).toBeLessThanOrEqual(
-      endMs + LocalStoreConfig.expiryDeltaMs,
-    );
+    expect(expireMs).toBeLessThanOrEqual(endMs + LocalStoreConfig.expiryMs);
 
     // Should not be able to add duplicate keys.
     fn.mockClear();
@@ -85,11 +83,9 @@ describe("localStore", () => {
     const expireMs2 = fn.mock.calls[0][2];
     expect(expireMs2).toBeGreaterThanOrEqual(expireMs);
     expect(expireMs2).toBeGreaterThanOrEqual(
-      startMs + LocalStoreConfig.expiryDeltaMs,
+      startMs + LocalStoreConfig.expiryMs,
     );
-    expect(expireMs2).toBeLessThanOrEqual(
-      endMs + LocalStoreConfig.expiryDeltaMs,
-    );
+    expect(expireMs2).toBeLessThanOrEqual(endMs + LocalStoreConfig.expiryMs);
 
     // Add a new key.
     fn.mockClear();

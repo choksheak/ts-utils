@@ -2,13 +2,16 @@
  * Indexed DB key-value store with support for auto-expirations.
  *
  * Why use this?
- * 1. No need to worry about running out of storage.
- * 2. Extremely simple interface to use indexed DBs.
- * 3. Auto-expirations frees you from worrying about data clean-up.
- * 4. Any serializable data type can be stored (except undefined).
+ * 1. Extremely simple interface to use indexed DBs.
+ * 2. Auto-expirations with GC frees you from worrying about data clean-up.
+ * 3. Any serializable data type can be stored (except undefined).
  *
  * How to use?
- * Just use the `kvStore` global constant like the local storage.
+ * Just use the `kvStore` global constant like the local storage, but with
+ * async interface functions as required by indexed DB.
+ *
+ * Why not use the indexed DB directly?
+ * It will require you to write a lot of code to reinvent the wheel.
  */
 
 import { Duration, durationOrMsToMs } from "./duration";
@@ -16,17 +19,26 @@ import { MS_PER_DAY } from "./timeConstants";
 
 /** Global defaults can be updated directly. */
 export const KvStoreConfig = {
-  // Updating the DB name will cause all old entries to be gone.
+  /**
+   * Name of the DB in the indexed DB.
+   * Updating the DB name will cause all old entries to be gone.
+   */
   dbName: "KVStore",
 
-  // Updating the version will cause all old entries to be gone.
+  /**
+   * Version of the DB schema. Most likely you will never want to change this.
+   * Updating the version will cause all old entries to be gone.
+   */
   dbVersion: 1,
 
-  // Use a constant store name to keep things simple.
+  /**
+   * Name of the store within the indexed DB. Each DB can have multiple stores.
+   * In practice, it doesn't matter what you name this to be.
+   */
   storeName: "kvStore",
 
   /** 30 days in ms. */
-  expiryDeltaMs: MS_PER_DAY * 30,
+  expiryMs: MS_PER_DAY * 30,
 
   /** Do GC once per day. */
   gcIntervalMs: MS_PER_DAY,
@@ -39,6 +51,7 @@ export function configureKvStore(config: Partial<KvStoreConfig>) {
   Object.assign(KvStoreConfig, config);
 }
 
+/** Type to represent a full object with metadata stored in the store. */
 export type KvStoredObject<T> = {
   // The key is required by the ObjectStore.
   key: string;
@@ -57,13 +70,9 @@ function validateStoredObject<T>(
   if (
     !obj ||
     typeof obj !== "object" ||
-    !("key" in obj) ||
     typeof obj.key !== "string" ||
-    !("value" in obj) ||
-    !("storedMs" in obj) ||
-    typeof obj.storedMs !== "number" ||
     obj.value === undefined ||
-    !("expiryMs" in obj) ||
+    typeof obj.storedMs !== "number" ||
     typeof obj.expiryMs !== "number" ||
     Date.now() >= obj.expiryMs
   ) {
@@ -90,19 +99,38 @@ function withOnError<T extends IDBRequest | IDBTransaction>(
  * need to use the default `kvStore` instance.
  */
 export class KvStore {
-  // We'll init the DB only on first use.
+  /** We'll init the DB only on first use. */
   private db: IDBDatabase | undefined;
 
-  // Local storage key name for the last GC completed timestamp.
+  /** Local storage key name for the last GC completed timestamp. */
   public readonly gcMsStorageKey: string;
+
+  public readonly dbVersion: number;
+  public readonly storeName: string;
+  public readonly defaultExpiryMs: number;
+  public readonly gcIntervalMs: number;
 
   public constructor(
     public readonly dbName: string,
-    public readonly dbVersion: number,
-    public readonly defaultExpiryDeltaMs = KvStoreConfig.expiryDeltaMs,
-    public readonly storeName = KvStoreConfig.storeName,
+    options?: {
+      dbVersion?: number;
+      storeName?: string;
+      defaultExpiryMs?: number | Duration;
+      gcIntervalMs?: number | Duration;
+    },
   ) {
-    this.gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${dbVersion}:${storeName}`;
+    this.dbVersion = options?.dbVersion ?? KvStoreConfig.dbVersion;
+    this.storeName = options?.storeName ?? KvStoreConfig.storeName;
+
+    this.defaultExpiryMs = options?.defaultExpiryMs
+      ? durationOrMsToMs(options.defaultExpiryMs)
+      : KvStoreConfig.expiryMs;
+
+    this.gcIntervalMs = options?.gcIntervalMs
+      ? durationOrMsToMs(options.gcIntervalMs)
+      : KvStoreConfig.gcIntervalMs;
+
+    this.gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${this.dbVersion}:${this.storeName}`;
   }
 
   private async getOrCreateDb() {
@@ -164,10 +192,11 @@ export class KvStore {
     });
   }
 
+  /** Set a value in the store. */
   public async set<T>(
     key: string,
     value: T,
-    expiryDeltaMs: number | Duration = this.defaultExpiryDeltaMs,
+    expiryDeltaMs: number | Duration = this.defaultExpiryMs,
   ): Promise<T> {
     const nowMs = Date.now();
     const obj: KvStoredObject<T> = {
@@ -211,6 +240,7 @@ export class KvStore {
     );
   }
 
+  /** Mainly used to get the expiration timestamp of an object. */
   public async getStoredObject<T>(
     key: string,
   ): Promise<KvStoredObject<T> | undefined> {
@@ -250,14 +280,21 @@ export class KvStore {
     }
   }
 
+  /** Get a value by key, or undefined if it does not exist. */
   public async get<T>(key: string): Promise<T | undefined> {
     const obj = await this.getStoredObject<T>(key);
 
     return obj?.value;
   }
 
+  /** Generic way to iterate through all entries. */
   public async forEach<T>(
-    callback: (key: string, value: T, expiryMs: number) => void | Promise<void>,
+    callback: (
+      key: string,
+      value: T,
+      expiryMs: number,
+      storedMs: number,
+    ) => void | Promise<void>,
   ): Promise<void> {
     await this.transact<void>("readonly", (objectStore, resolve, reject) => {
       const request = withOnError(objectStore.openCursor(), reject);
@@ -271,7 +308,12 @@ export class KvStore {
           if (cursor.key) {
             const obj = validateStoredObject(cursor.value);
             if (obj !== undefined) {
-              await callback(String(cursor.key), obj.value as T, obj.expiryMs);
+              await callback(
+                String(cursor.key),
+                obj.value as T,
+                obj.expiryMs,
+                obj.storedMs,
+              );
             }
           }
           cursor.continue();
@@ -282,7 +324,11 @@ export class KvStore {
     });
   }
 
-  /** Cannot be a getter because this needs to be async. */
+  /**
+   * Returns the number of items in the store. Note that getting the size
+   * requires iterating through the entire store because the items could expire
+   * at any time, and hence the size is a dynamic number.
+   */
   public async size() {
     let count = 0;
     await this.forEach(() => {
@@ -291,6 +337,7 @@ export class KvStore {
     return count;
   }
 
+  /** Remove all items from the store. */
   public async clear() {
     const keys: string[] = [];
     await this.forEach((key) => {
@@ -300,15 +347,22 @@ export class KvStore {
     await this.delete(keys);
   }
 
-  /** Mainly for debugging dumps. */
-  public async asMap(): Promise<Map<string, unknown>> {
-    const map = new Map<string, unknown>();
-    await this.forEach((key, value, expiryMs) => {
-      map.set(key, { value, expiryMs });
+  /**
+   * Returns all items as map of key to value, mainly used for debugging dumps.
+   * The type T is applied to all values, even though they might not be of type
+   * T (in the case when you store different data types in the same store).
+   */
+  public async asMap<T>(): Promise<
+    Map<string, Omit<KvStoredObject<T>, "key">>
+  > {
+    const map = new Map<string, Omit<KvStoredObject<T>, "key">>();
+    await this.forEach((key, value, expiryMs, storedMs) => {
+      map.set(key, { value: value as T, expiryMs, storedMs });
     });
     return map;
   }
 
+  /** Returns the ms timestamp for the last GC (garbage collection). */
   public get lastGcMs(): number {
     const lastGcMsStr = globalThis.localStorage.getItem(this.gcMsStorageKey);
     if (!lastGcMsStr) return 0;
@@ -317,11 +371,12 @@ export class KvStore {
     return isNaN(ms) ? 0 : ms;
   }
 
+  /** Set the ms timestamp for the last GC (garbage collection). */
   public set lastGcMs(ms: number) {
     globalThis.localStorage.setItem(this.gcMsStorageKey, String(ms));
   }
 
-  /** Perform garbage-collection if due. */
+  /** Perform garbage-collection if due, else do nothing. */
   public async gc() {
     const lastGcMs = this.lastGcMs;
 
@@ -331,7 +386,7 @@ export class KvStore {
       return;
     }
 
-    if (Date.now() < lastGcMs + KvStoreConfig.gcIntervalMs) {
+    if (Date.now() < lastGcMs + this.gcIntervalMs) {
       return; // not due for next GC yet
     }
 
@@ -339,7 +394,10 @@ export class KvStore {
     await this.gcNow();
   }
 
-  /** Perform garbage-collection immediately without checking. */
+  /**
+   * Perform garbage collection immediately without checking whether we are
+   * due for the next GC or not.
+   */
   public async gcNow() {
     console.log(`Starting kvStore GC on ${this.dbName} v${this.dbVersion}...`);
 
@@ -367,76 +425,64 @@ export class KvStore {
     // Mark the end time as last GC time.
     this.lastGcMs = Date.now();
   }
-
-  /** Get an independent store item with a locked key and value type. */
-  public getItem<T>(
-    key: string,
-    defaultExpiryDeltaMs?: number,
-  ): KvStoreItem<T> {
-    return new KvStoreItem<T>(key, defaultExpiryDeltaMs, this);
-  }
 }
 
 /**
  * Default KV store ready for immediate use. You can create new instances if
  * you want, but most likely you will only need one store instance.
  */
-export const kvStore = new KvStore(
-  KvStoreConfig.dbName,
-  KvStoreConfig.dbVersion,
-  KvStoreConfig.expiryDeltaMs,
-);
+export const kvStore = new KvStore(KvStoreConfig.dbName);
 
 /**
  * Class to represent one key in the store with a default expiration.
  */
 export class KvStoreItem<T> {
+  public readonly defaultExpiryMs: number;
+
   public constructor(
     public readonly key: string,
-    public readonly defaultExpiryDeltaMs?: number,
+    defaultExpiryMs: number | Duration = KvStoreConfig.expiryMs,
     public readonly store = kvStore,
-  ) {}
+  ) {
+    this.defaultExpiryMs = defaultExpiryMs && durationOrMsToMs(defaultExpiryMs);
+  }
+
+  /** Set a value in the store. */
+  public async set(
+    value: T,
+    expiryDeltaMs: number | undefined = this.defaultExpiryMs,
+  ): Promise<void> {
+    await this.store.set(this.key, value, expiryDeltaMs);
+  }
 
   /**
    * Example usage:
    *
-   *   const { value, storedMs, expiryMs } = await myKvItem.getStoredObject();
+   *   const { value, storedMs, expiryMs, storedMs } =
+   *     await myKvItem.getStoredObject();
    */
   public async getStoredObject(): Promise<KvStoredObject<T> | undefined> {
     return await this.store.getStoredObject(this.key);
   }
 
+  /** Get a value by key, or undefined if it does not exist. */
   public async get(): Promise<T | undefined> {
     return await this.store.get(this.key);
   }
 
-  public async set(
-    value: T,
-    expiryDeltaMs: number | undefined = this.defaultExpiryDeltaMs,
-  ): Promise<void> {
-    await this.store.set(this.key, value, expiryDeltaMs);
-  }
-
+  /** Delete this key from the store. */
   public async delete(): Promise<void> {
     await this.store.delete(this.key);
   }
 }
 
-/**
- * Create a KV store item with a key and a default expiration. This is
- * basically similar to using `kvStore.getItem(key, defaultExpiration)`, but is
- * mostly a shorthand for usages using each key independently as a top level
- * object.
- */
+/** Create a KV store item with a key and a default expiration. */
 export function kvStoreItem<T>(
   key: string,
-  defaultExpiration?: number | Duration,
+  expiryMs?: number | Duration,
   store = kvStore,
 ): KvStoreItem<T> {
-  const defaultExpiryDeltaMs =
-    defaultExpiration !== undefined
-      ? durationOrMsToMs(defaultExpiration)
-      : undefined;
+  expiryMs = expiryMs && durationOrMsToMs(expiryMs);
 
-  return new KvStoreItem<T>(key, defaultExpiryDeltaMs, store);
+  return new KvStoreItem<T>(key, expiryMs, store);
 }

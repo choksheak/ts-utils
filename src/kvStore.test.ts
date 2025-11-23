@@ -65,10 +65,8 @@ describe("KVStore", () => {
     expect(fn.mock.calls[0][1]).toBe(1);
 
     const expireMs = fn.mock.calls[0][2];
-    expect(expireMs).toBeGreaterThanOrEqual(
-      startMs + KvStoreConfig.expiryDeltaMs,
-    );
-    expect(expireMs).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
+    expect(expireMs).toBeGreaterThanOrEqual(startMs + KvStoreConfig.expiryMs);
+    expect(expireMs).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryMs);
 
     // Should not be able to add duplicate keys.
     fn.mockClear();
@@ -84,10 +82,8 @@ describe("KVStore", () => {
 
     const expireMs2 = fn.mock.calls[0][2];
     expect(expireMs2).toBeGreaterThanOrEqual(expireMs);
-    expect(expireMs2).toBeGreaterThanOrEqual(
-      startMs + KvStoreConfig.expiryDeltaMs,
-    );
-    expect(expireMs2).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryDeltaMs);
+    expect(expireMs2).toBeGreaterThanOrEqual(startMs + KvStoreConfig.expiryMs);
+    expect(expireMs2).toBeLessThanOrEqual(endMs + KvStoreConfig.expiryMs);
 
     // Add a new key.
     fn.mockClear();
