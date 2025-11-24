@@ -345,12 +345,13 @@ export class KvStore implements FullStorageAdapter<any> {
 
   /** Remove all items from the store. */
   public async clear(): Promise<void> {
-    const keys: string[] = [];
-    await this.forEach((key) => {
-      keys.push(key);
-    });
+    await this.transact<void>("readwrite", (objectStore, resolve, reject) => {
+      const request = withOnError(objectStore.clear(), reject);
 
-    await this.delete(keys);
+      request.onsuccess = () => {
+        resolve();
+      };
+    });
   }
 
   /**
