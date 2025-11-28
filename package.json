@@ -4,6 +4,7 @@
   "version": "0.3.3",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
+  "sideEffects": false,
   "scripts": {
     "lint": "eslint .",
     "fix": "eslint . --fix",
