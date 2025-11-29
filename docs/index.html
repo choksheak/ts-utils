@@ -4,8 +4,10 @@
 <head>
     <title>Chok’s TypeScript Utilities</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/nnfx-light.min.css" media="(prefers-color-scheme: light)">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/nnfx-dark.min.css" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/nnfx-light.min.css"
+        media="(prefers-color-scheme: light)">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/nnfx-dark.min.css"
+        media="(prefers-color-scheme: dark)">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/typescript.min.js"></script>
     <script>hljs.highlightAll();</script>
@@ -68,6 +70,9 @@
             font-size: 20px;
             font-weight: 550;
             margin: 24px 0 16px;
+            display: flex;
+            gap: 4px;
+            align-items: center;
         }
 
         @media (prefers-color-scheme: light) {
@@ -126,58 +131,69 @@
 <body>
     <div class="content">
 
-    <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; padding-bottom: 10px;">
-        <h2>@choksheak/ts-utils</h2>
-        <h1>Chok’s TypeScript Utilities</h1>
-    </div>
+        <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; padding-bottom: 10px;">
+            <h2>@choksheak/ts-utils</h2>
+            <h1>Chok’s TypeScript Utilities</h1>
+        </div>
 
-    <p>
-        This package is a time-tested collection of Typescript utilities that I have personally needed in almost every
-        project that I have
-        worked in. Making this an open source, public npm package allows me to share this code freely with others as
-        well as using it for my own personal and professional projects. Feel free to use it in your own projects without
-        any restrictions.
-    </p>
+        <p>
+            This package is a time-tested collection of Typescript utilities
+            that I have personally needed in almost every project that I have
+            worked in. Making this an open source, public npm package allows me
+            to share this code freely with others as well as using it for my
+            own personal and professional projects. Feel free to use it in your
+            own projects without any restrictions.
+        </p>
 
-    <p>
-        The code supports full tree-shaking. Therefore your code will only grow in size by whatever you use. Any code
-        that you are not using will not contribute to your code size.
-    </p>
+        <p>
+            The code supports full tree-shaking. Therefore your code will only
+            grow in size by whatever you use. Any code that you are not using
+            will not contribute to your code size.
+        </p>
 
-    <p
-        style="background-color: rgb(250, 250, 202); padding: 10px 20px; border: 1px solid rgb(244, 214, 19); border-radius: 20px; color: rgb(155, 103, 0); display: flex; gap: 12px;">
-        <span style="font-size: 30px; transform: translateY(7px);">🚀</span>
-        <span><b style="font-weight: 600;">@choksheak/ts-utils</b> allows you to reuse common Typescript functions
-            without reinventing the wheels, thus <b>saving
-                you time</b> and <b>reducing the size of your code</b>.</span>
-    </p>
+        <p
+            style="background-color: rgb(250, 250, 202); padding: 10px 20px; border: 1px solid rgb(244, 214, 19); border-radius: 20px; color: rgb(155, 103, 0); display: flex; gap: 12px;">
+            <span style="font-size: 30px; transform: translateY(7px);">🚀</span>
+            <span><b style="font-weight: 600;">@choksheak/ts-utils</b> allows you to reuse common Typescript functions
+                without reinventing the wheels, thus <b>saving
+                    you time</b> and <b>reducing the size of your code</b>.</span>
+        </p>
 
-    <p style="display: flex; justify-content: center; gap: 6px; margin: 60px 0 120px;">
-        <a href="#GetStarted" onClick="document.getElementById('GetStarted').scrollIntoView({behavior: 'smooth', block: 'start'}); return false">Get Started</a>
-        ·
-        <a href="#Examples" onClick="document.getElementById('Examples').scrollIntoView({behavior: 'smooth', block: 'start'}); return false">Examples</a>
-        ·
-        <a href="reference/index.html" target="_blank">Reference</a>
-        ·
-        <a href="https://github.com/choksheak/ts-utils" target="_blank">Source code</a>
-    </p>
+        <p style="display: flex; justify-content: center; gap: 6px; margin: 60px 0 120px;">
+            <a href="#GetStarted"
+                onClick="document.getElementById('GetStarted').scrollIntoView({behavior: 'smooth', block: 'start'}); return false">Get
+                Started</a>
+            ·
+            <a href="#Examples"
+                onClick="document.getElementById('Examples').scrollIntoView({behavior: 'smooth', block: 'start'}); return false">Examples</a>
+            ·
+            <a href="reference/index.html" target="_blank">Reference</a>
+            ·
+            <a href="https://github.com/choksheak/ts-utils" target="_blank">Source code</a>
+        </p>
 
-    <a id="GetStarted" name="GetStarted"></a>
-    <h3>Get Started</h3>
+        <a id="GetStarted" name="GetStarted"></a>
+        <h3>Get Started</h3>
 
-    <p>
-        Install the package using the standard package manager command:
-    </p>
+        <p>
+            Install the package using the standard package manager command:
+        </p>
 
-    <pre><code class="language-plaintext">npm i @choksheak/ts-utils</code></pre>
+        <pre><code class="language-plaintext">npm i @choksheak/ts-utils</code></pre>
 
-    <a id="Examples" name="Examples"></a>
-    <h3>Examples</h3>
+        <a id="Examples" name="Examples"></a>
+        <h3>Examples</h3>
 
-    <!-- arrayBuffer -->
-    <h4>arrayBuffer.ts</h4>
+        <!-- arrayBuffer -->
 
-    <pre><code>import { arrayBufferToHex, arrayBufferToBase64 } from "@choksheak/ts-utils/arrayBuffer";
+        <h4>
+            arrayBuffer.ts
+            <a href="reference/modules/arrayBuffer.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
+
+        <pre><code>import { arrayBufferToHex, arrayBufferToBase64 } from "@choksheak/ts-utils/arrayBuffer";
 
 const arrayBuffer = new ArrayBuffer(8); // 8 bytes
 const intArray = new Uint16Array(arrayBuffer); // make writeable
@@ -191,10 +207,16 @@ console.log(arrayBufferToHex(arrayBuffer));
 // Outputs "ZADIAAAAAAA=".
 console.log(arrayBufferToBase64(arrayBuffer));</code></pre>
 
-    <!-- asNumber -->
-    <h4>asNumber.ts</h4>
+        <!-- asNumber -->
 
-    <pre><code>import { asNumber } from "@choksheak/ts-utils/asNumber";
+        <h4>
+            asNumber.ts
+            <a href="reference/modules/asNumber.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
+
+        <pre><code>import { asNumber } from "@choksheak/ts-utils/asNumber";
 
 // Outputs "0".
 console.log(asNumber(undefined));
@@ -220,11 +242,16 @@ console.log(asNumber(Infinity));
 // Outputs "0".
 console.log(asNumber({}));</code></pre>
 
-    <!-- assert -->
+        <!-- assert -->
 
-    <h4>assert.ts</h4>
+        <h4>
+            assert.ts
+            <a href="reference/modules/assert.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { assert } from "@choksheak/ts-utils/assert";
+        <pre><code>import { assert } from "@choksheak/ts-utils/assert";
 
 const s: string | null = ...
 
@@ -234,11 +261,16 @@ assert(s, "value is falsy");
 // Always outputs "string".
 console.log(typeof s);</code></pre>
 
-    <!-- base64Url -->
+        <!-- base64Url -->
 
-    <h4>base64Url.ts</h4>
+        <h4>
+            base64Url.ts
+            <a href="reference/modules/base64Url.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { base64ToBase64URL, base64UrlToBase64 } from "@choksheak/ts-utils/base64Url";
+        <pre><code>import { base64ToBase64URL, base64UrlToBase64 } from "@choksheak/ts-utils/base64Url";
 
 // Outputs "A-B_".
 console.log(base64ToBase64URL("A+B/"));
@@ -246,20 +278,30 @@ console.log(base64ToBase64URL("A+B/"));
 // Outputs "A+B/".
 console.log(base64UrlToBase64("A-B_"));</code></pre>
 
-    <!-- capLength -->
+        <!-- capLength -->
 
-    <h4>capLength.ts</h4>
+        <h4>
+            capLength.ts
+            <a href="reference/modules/capLength.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { capLength } from "@choksheak/ts-utils/capLength";
+        <pre><code>import { capLength } from "@choksheak/ts-utils/capLength";
 
 // Outputs "01234 ... (5 more)".
 console.log(capLength("0123456789", 5));</code></pre>
 
-    <!-- concatIterators -->
+        <!-- concatIterators -->
 
-    <h4>concatIterators.ts</h4>
+        <h4>
+            concatIterators.ts
+            <a href="reference/modules/concatIterators.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { concatIterators } from "@choksheak/ts-utils/concatIterators";
+        <pre><code>import { concatIterators } from "@choksheak/ts-utils/concatIterators";
 
 function* iterator1() {
     yield 1;
@@ -274,38 +316,58 @@ function* iterator2() {
 // Outputs "Array(4) [ 1, 2, 3, 4 ]".
 console.log(Array.from(concatIterators(iterator1(), iterator2())));</code></pre>
 
-    <!-- duration -->
+        <!-- duration -->
 
-    <h4>duration.ts</h4>
+        <h4>
+            duration.ts
+            <a href="reference/modules/duration.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { readableDuration } from "@choksheak/ts-utils/duration";
+        <pre><code>import { readableDuration } from "@choksheak/ts-utils/duration";
 
 // Outputs "14 days, 6 hrs, 56 mins, 7 secs, 890 ms".
 console.log(readableDuration(1234567890));</code></pre>
 
-    <!-- isEmpty -->
+        <!-- isEmpty -->
 
-    <h4>isEmpty.ts</h4>
+        <h4>
+            isEmpty.ts
+            <a href="reference/modules/isEmpty.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { isEmpty } from "@choksheak/ts-utils/isEmpty";
+        <pre><code>import { isEmpty } from "@choksheak/ts-utils/isEmpty";
 
 // Outputs "true".
 console.log(isEmpty({}));</code></pre>
 
-    <!-- isPromise -->
+        <!-- isPromise -->
 
-    <h4>isPromise.ts</h4>
+        <h4>
+            isPromise.ts
+            <a href="reference/modules/isPromise.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { isPromise } from "@choksheak/ts-utils/isPromise";
+        <pre><code>import { isPromise } from "@choksheak/ts-utils/isPromise";
 
 // Outputs "true".
 console.log(isPromise(new Promise()));</code></pre>
 
-    <!-- kvStore -->
+        <!-- kvStore -->
 
-    <h4>kvStore.ts</h4>
+        <h4>
+            kvStore.ts
+            <a href="reference/modules/kvStore.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { kvStore } from "@choksheak/ts-utils/kvStore";
+        <pre><code>import { kvStore } from "@choksheak/ts-utils/kvStore";
 
 // Set key1="value1" in the indexed DB.
 await kvStore.set("key1", "value1");
@@ -319,11 +381,16 @@ await kvStore.delete("key1");
 // Remove all items from the KV store.
 await kvStore.clear();</code></pre>
 
-    <!-- localStore -->
+        <!-- localStore -->
 
-    <h4>localStore.ts</h4>
+        <h4>
+            localStore.ts
+            <a href="reference/modules/localStore.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { localStore } from "@choksheak/ts-utils/localStore";
+        <pre><code>import { localStore } from "@choksheak/ts-utils/localStore";
 
 // Set key1="value1" in the local storage.
 localStore.set("key1", "value1");
@@ -337,29 +404,44 @@ localStore.delete("key1");
 // Remove all items from the local store.
 localStore.clear();</code></pre>
 
-    <!-- mean -->
+        <!-- mean -->
 
-    <h4>mean.ts</h4>
+        <h4>
+            mean.ts
+            <a href="reference/modules/mean.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { mean } from "@choksheak/ts-utils/mean";
+        <pre><code>import { mean } from "@choksheak/ts-utils/mean";
 
 // Outputs "2.5".
 console.log(mean([1, 2, 3, 4]));</code></pre>
 
-    <!-- median -->
+        <!-- median -->
 
-    <h4>median.ts</h4>
+        <h4>
+            median.ts
+            <a href="reference/modules/median.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>        
 
-    <pre><code>import { median } from "@choksheak/ts-utils/median";
+        <pre><code>import { median } from "@choksheak/ts-utils/median";
 
 // Outputs "4.5".
 console.log(median([1, 4, 5, 100]));</code></pre>
 
-    <!-- nonEmpty -->
+        <!-- nonEmpty -->
 
-    <h4>nonEmpty.ts</h4>
+        <h4>
+            nonEmpty.ts
+            <a href="reference/modules/nonEmpty.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { nonEmpty } from "@choksheak/ts-utils/nonEmpty";
+        <pre><code>import { nonEmpty } from "@choksheak/ts-utils/nonEmpty";
 
 const s: string | null = ...
 
@@ -370,11 +452,16 @@ const t = nonEmpty(s, "s");
 // Always outputs "string".
 console.log(typeof t);</code></pre>
 
-    <!-- nonNil -->
+        <!-- nonNil -->
 
-    <h4>nonNil.ts</h4>
+        <h4>
+            nonNil.ts
+            <a href="reference/modules/nonNil.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { nonNil } from "@choksheak/ts-utils/nonNil";
+        <pre><code>import { nonNil } from "@choksheak/ts-utils/nonNil";
 
 const s: string | null = ...
 
@@ -385,29 +472,44 @@ const t = nonNil(s, "s");
 // Always outputs "string".
 console.log(typeof t);</code></pre>
 
-    <!-- round -->
+        <!-- round -->
 
-    <h4>round.ts</h4>
+        <h4>
+            round.ts
+            <a href="reference/modules/round.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { round } from "@choksheak/ts-utils/round";
+        <pre><code>import { round } from "@choksheak/ts-utils/round";
 
 // Outputs "1234.12". Note that the last zero is omitted.
 console.log(round(1234.126, 3));</code></pre>
 
-    <!-- roundToString -->
+        <!-- roundToString -->
 
-    <h4>roundToString.ts</h4>
+        <h4>
+            roundToString.ts
+            <a href="reference/modules/roundToString.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { roundToString } from "@choksheak/ts-utils/roundToString";
+        <pre><code>import { roundToString } from "@choksheak/ts-utils/roundToString";
 
 // Outputs "1,234.120". Commas are added, and trailing zeros are preserved.
 console.log(roundToString(1234.126, 3));</code></pre>
 
-    <!-- safeBtoa -->
+        <!-- safeBtoa -->
 
-    <h4>safeBtoa.ts</h4>
+        <h4>
+            safeBtoa.ts
+            <a href="reference/modules/safeBtoa.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { safeBtoa } from "@choksheak/ts-utils/safeBtoa";
+        <pre><code>import { safeBtoa } from "@choksheak/ts-utils/safeBtoa";
 
 const s = "Hello, world! ✨"; // ✨ is outside Latin-1
 
@@ -416,11 +518,16 @@ try { btoa(s) } catch { /* Will not work with "✨" */ }
 // Outputs "SGVsbG8sIHdvcmxkISDinKg=".
 console.log(safeBtoa(s));</code></pre>
 
-    <!-- sha256 -->
+        <!-- sha256 -->
 
-    <h4>sha256.ts</h4>
+        <h4>
+            sha256.ts
+            <a href="reference/modules/sha256.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { arrayBufferToBase64 } from "@choksheak/ts-utils/arrayBuffer";
+        <pre><code>import { arrayBufferToBase64 } from "@choksheak/ts-utils/arrayBuffer";
 import { sha256 } from "@choksheak/ts-utils/sha256";
 
 const arrayBuffer = await sha256("abc123");
@@ -428,29 +535,44 @@ const arrayBuffer = await sha256("abc123");
 // Outputs "bKE9UspwyIPg8LsQHkJaiehiTeUdstI5JZOvaoQRgJA=".
 console.log(arrayBufferToBase64(arrayBuffer));</code></pre>
 
-    <!-- sleep -->
+        <!-- sleep -->
 
-    <h4>sleep.ts</h4>
+        <h4>
+            sleep.ts
+            <a href="reference/modules/sleep.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { sleep } from "@choksheak/ts-utils/sleep";
+        <pre><code>import { sleep } from "@choksheak/ts-utils/sleep";
 
 // Sleep for 1 second, or 1000 milliseconds.
 await sleep(1000);</code></pre>
 
-    <!-- sum -->
+        <!-- sum -->
 
-    <h4>sum.ts</h4>
+        <h4>
+            sum.ts
+            <a href="reference/modules/sum.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { sum } from "@choksheak/ts-utils/sum";
+        <pre><code>import { sum } from "@choksheak/ts-utils/sum";
 
 // Outputs "10".
 console.log(sum([1, 2, 3, 4]));</code></pre>
 
-    <!-- timeConstants -->
+        <!-- timeConstants -->
 
-    <h4>timeConstants.ts</h4>
+        <h4>
+            timeConstants.ts
+            <a href="reference/modules/timeConstants.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { MS_PER_DAY, MS_PER_HOUR } from "@choksheak/ts-utils/timeConstants";
+        <pre><code>import { MS_PER_DAY, MS_PER_HOUR } from "@choksheak/ts-utils/timeConstants";
 
 // Outputs "3600000".
 console.log(MS_PER_HOUR);
@@ -458,11 +580,16 @@ console.log(MS_PER_HOUR);
 // Outputs "86400000".
 console.log(MS_PER_DAY);</code></pre>
 
-    <!-- timer -->
+        <!-- timer -->
 
-    <h4>timer.ts</h4>
+        <h4>
+            timer.ts
+            <a href="reference/modules/timer.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
 
-    <pre><code>import { sleep } from "@choksheak/ts-utils/sleep";
+        <pre><code>import { sleep } from "@choksheak/ts-utils/sleep";
 import { timer } from "@choksheak/ts-utils/timer";
 
 // Create a new timer object and starts the timing.
@@ -474,18 +601,24 @@ await sleep(2000);
 // Outputs "Operation took 2.000s."
 console.log(`Operation took ${t}.`);</code></pre>
 
-    <!-- toReadableString -->
-    <h4>toReadableString.ts</h4>
+        <!-- toReadableString -->
 
-    <pre><code>import { toReadableString } from "@choksheak/ts-utils/toReadableString";
+        <h4>
+            toReadableString.ts
+            <a href="reference/modules/toReadableString.html" target="_blank" style="display:flex">
+                <img src="images/openIcon.svg" style="width:20px;height:20px;" />
+            </a>
+        </h4>
+
+        <pre><code>import { toReadableString } from "@choksheak/ts-utils/toReadableString";
 
 // Outputs "Error: testing".
 console.log(toReadableString(new Error("testing")));</code></pre>
 
-    <h3>Reference</h3>
+        <h3>Reference</h3>
 
-    For more details about each module, please refer to the
-    <a href="reference/index.html" target="_blank">Reference Documentation</a>
+        For more details about each module, please refer to the
+        <a href="reference/index.html" target="_blank">Reference Documentation</a>
 
     </div>
 
