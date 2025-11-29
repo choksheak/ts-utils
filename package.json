@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "ci": "npm run lint && npm run tsc && npm run build && npm run test",
     "ls": "lint-staged",
-    "docs": "rm -rf docs && typedoc `find src -name '*.ts' ! -name '*.test.ts'` --out docs --name 'Chok’s Typescript Utilities'",
+    "docs": "typedoc && cp assets/index.html docs",
     "clean": "rm -rf dist",
     "build": "tsup src/*",
     "gen-types": "tsc --emitDeclarationOnly --declaration",

@@ -10,7 +10,10 @@ export function median(numbers: unknown[]): number {
   }
 
   // Create a copy with slice() to avoid mutating the original array.
-  const sorted = numbers.map(asNumber).slice().sort();
+  const sorted = numbers
+    .map(asNumber)
+    .slice()
+    .sort((a, b) => a - b);
 
   const middleIndex = Math.floor(sorted.length / 2);
 
