@@ -100,59 +100,42 @@ function withOnError<T extends IDBRequest | IDBTransaction>(
  * You can create multiple KvStores if you want, but most likely you will only
  * need to use the default `kvStore` instance.
  */
-// Using `any` because the store could store any type of data for each key,
-// but the caller can specify a more specific type when calling each of the
-// methods.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export class KvStore implements FullStorageAdapter<any> {
+export function createKvStore(
+  dbName: string,
+  options?: {
+    dbVersion?: number;
+    storeName?: string;
+    defaultExpiryMs?: number | Duration;
+    gcIntervalMs?: number | Duration;
+  },
+) {
   /** We'll init the DB only on first use. */
-  private db: IDBDatabase | undefined;
+  let db: IDBDatabase | undefined;
 
-  /** Local storage key name for the last GC completed timestamp. */
-  public readonly gcMsStorageKey: string;
+  const dbVersion = options?.dbVersion ?? KvStoreConfig.dbVersion;
+  const storeName = options?.storeName ?? KvStoreConfig.storeName;
 
-  public readonly dbVersion: number;
-  public readonly storeName: string;
-  public readonly defaultExpiryMs: number;
-  public readonly gcIntervalMs: number;
+  const defaultExpiryMs = options?.defaultExpiryMs
+    ? durationOrMsToMs(options.defaultExpiryMs)
+    : KvStoreConfig.expiryMs;
 
-  public constructor(
-    public readonly dbName: string,
-    options?: {
-      dbVersion?: number;
-      storeName?: string;
-      defaultExpiryMs?: number | Duration;
-      gcIntervalMs?: number | Duration;
-    },
-  ) {
-    this.dbVersion = options?.dbVersion ?? KvStoreConfig.dbVersion;
-    this.storeName = options?.storeName ?? KvStoreConfig.storeName;
+  const gcIntervalMs = options?.gcIntervalMs
+    ? durationOrMsToMs(options.gcIntervalMs)
+    : KvStoreConfig.gcIntervalMs;
 
-    this.defaultExpiryMs = options?.defaultExpiryMs
-      ? durationOrMsToMs(options.defaultExpiryMs)
-      : KvStoreConfig.expiryMs;
+  const gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${dbVersion}:${storeName}`;
 
-    this.gcIntervalMs = options?.gcIntervalMs
-      ? durationOrMsToMs(options.gcIntervalMs)
-      : KvStoreConfig.gcIntervalMs;
-
-    this.gcMsStorageKey = `__kvStore:lastGcMs:${dbName}:v${this.dbVersion}:${this.storeName}`;
-  }
-
-  private async getOrCreateDb() {
-    if (!this.db) {
-      this.db = await new Promise<IDBDatabase>((resolve, reject) => {
-        const request = withOnError(
-          globalThis.indexedDB.open(this.dbName, this.dbVersion),
-          reject,
-        );
+  async function getOrCreateDb() {
+    if (!db) {
+      db = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = withOnError(indexedDB.open(dbName, dbVersion), reject);
 
         request.onupgradeneeded = (event) => {
           const db = (event.target as unknown as { result: IDBDatabase })
             .result;
 
           // Create the store on DB init.
-          const objectStore = db.createObjectStore(this.storeName, {
+          const objectStore = db.createObjectStore(storeName, {
             keyPath: "key",
           });
 
@@ -169,10 +152,10 @@ export class KvStore implements FullStorageAdapter<any> {
       });
     }
 
-    return this.db;
+    return db;
   }
 
-  private async transact<T>(
+  async function transact<T>(
     mode: IDBTransactionMode,
     callback: (
       objectStore: IDBObjectStore,
@@ -180,319 +163,332 @@ export class KvStore implements FullStorageAdapter<any> {
       reject: (reason?: unknown) => void,
     ) => void,
   ): Promise<T> {
-    const db = await this.getOrCreateDb();
+    const db = await getOrCreateDb();
 
     return await new Promise<T>((resolve, reject) => {
-      const transaction = withOnError(
-        db.transaction(this.storeName, mode),
-        reject,
-      );
+      const transaction = withOnError(db.transaction(storeName, mode), reject);
 
       transaction.onabort = (event) => {
         reject(event);
       };
 
-      const objectStore = transaction.objectStore(this.storeName);
+      const objectStore = transaction.objectStore(storeName);
 
       callback(objectStore, resolve, reject);
     });
   }
 
-  /** Set a value in the store. */
-  public async set<T>(
-    key: string,
-    value: T,
-    expiryDeltaMs: number | Duration = this.defaultExpiryMs,
-  ): Promise<T> {
-    const nowMs = Date.now();
-    const obj: KvStoredObject<T> = {
-      key,
-      value,
-      storedMs: nowMs,
-      expiryMs: nowMs + durationOrMsToMs(expiryDeltaMs),
-    };
+  const obj = {
+    /** Input name for the DB. */
+    dbName,
 
-    return await this.transact<T>(
-      "readwrite",
-      (objectStore, resolve, reject) => {
-        const request = withOnError(objectStore.put(obj), reject);
+    /** Input version for the DB. */
+    dbVersion,
+
+    /** Input name for the DB store. */
+    storeName,
+
+    /** Default expiry to use if not specified in set(). */
+    defaultExpiryMs,
+
+    /** Time interval for when GC's occur. */
+    gcIntervalMs,
+
+    /** Local storage key name for the last GC completed timestamp. */
+    gcMsStorageKey,
+
+    /** Set a value in the store. */
+    async set<T>(
+      key: string,
+      value: T,
+      expiryDeltaMs?: number | Duration,
+    ): Promise<T> {
+      const nowMs = Date.now();
+      const stored: KvStoredObject<T> = {
+        key,
+        value,
+        storedMs: nowMs,
+        expiryMs: nowMs + durationOrMsToMs(expiryDeltaMs ?? defaultExpiryMs),
+      };
+
+      return await transact<T>("readwrite", (objectStore, resolve, reject) => {
+        const request = withOnError(objectStore.put(stored), reject);
 
         request.onsuccess = () => {
           resolve(value);
 
-          this.gc(); // check GC on every write
+          obj.gc(); // check GC on every write
         };
-      },
-    );
-  }
+      });
+    },
 
-  /** Delete one or multiple keys. */
-  public async delete(key: string | string[]): Promise<void> {
-    return await this.transact<void>(
-      "readwrite",
-      (objectStore, resolve, reject) => {
-        objectStore.transaction.oncomplete = () => {
-          resolve();
-        };
+    /** Delete one or multiple keys. */
+    async delete(key: string | string[]): Promise<void> {
+      return await transact<void>(
+        "readwrite",
+        (objectStore, resolve, reject) => {
+          objectStore.transaction.oncomplete = () => {
+            resolve();
+          };
 
-        if (typeof key === "string") {
-          withOnError(objectStore.delete(key), reject);
-        } else {
-          for (const k of key) {
-            withOnError(objectStore.delete(k), reject);
+          if (typeof key === "string") {
+            withOnError(objectStore.delete(key), reject);
+          } else {
+            for (const k of key) {
+              withOnError(objectStore.delete(k), reject);
+            }
           }
-        }
-      },
-    );
-  }
+        },
+      );
+    },
 
-  /** Mainly used to get the expiration timestamp of an object. */
-  public async getStoredObject<T>(
-    key: string,
-  ): Promise<KvStoredObject<T> | undefined> {
-    const stored = await this.transact<KvStoredObject<T> | undefined>(
-      "readonly",
-      (objectStore, resolve, reject) => {
-        const request = withOnError(objectStore.get(key), reject);
+    /** Mainly used to get the expiration timestamp of an object. */
+    async getStoredObject<T>(
+      key: string,
+    ): Promise<KvStoredObject<T> | undefined> {
+      const stored = await transact<KvStoredObject<T> | undefined>(
+        "readonly",
+        (objectStore, resolve, reject) => {
+          const request = withOnError(objectStore.get(key), reject);
 
-        request.onsuccess = () => {
-          resolve(request.result);
-        };
-      },
-    );
+          request.onsuccess = () => {
+            resolve(request.result);
+          };
+        },
+      );
 
-    if (!stored) {
-      return undefined;
-    }
-
-    try {
-      const obj = validateStoredObject(stored);
-      if (!obj) {
-        await this.delete(key);
-
-        this.gc(); // check GC on every read of an expired key
-
+      if (!stored) {
         return undefined;
       }
 
-      return obj;
-    } catch (e) {
-      console.error(`Invalid kv value: ${key}=${JSON.stringify(stored)}:`, e);
-      await this.delete(key);
+      try {
+        const valid = validateStoredObject(stored);
+        if (!valid) {
+          await obj.delete(key);
 
-      this.gc(); // check GC on every read of an invalid key
+          obj.gc(); // check GC on every read of an expired key
 
-      return undefined;
-    }
-  }
+          return undefined;
+        }
 
-  /** Get a value by key, or undefined if it does not exist. */
-  public async get<T>(key: string): Promise<T | undefined> {
-    const obj = await this.getStoredObject<T>(key);
+        return valid;
+      } catch (e) {
+        console.error(`Invalid kv value: ${key}=${JSON.stringify(stored)}:`, e);
+        await obj.delete(key);
 
-    return obj?.value;
-  }
+        obj.gc(); // check GC on every read of an invalid key
 
-  /** Generic way to iterate through all entries. */
-  public async forEach<T>(
-    callback: (
-      key: string,
-      value: T,
-      expiryMs: number,
-      storedMs: number,
-    ) => void | Promise<void>,
-  ): Promise<void> {
-    await this.transact<void>("readonly", (objectStore, resolve, reject) => {
-      const request = withOnError(objectStore.openCursor(), reject);
+        return undefined;
+      }
+    },
 
-      request.onsuccess = async (event) => {
-        const cursor = (
-          event.target as unknown as { result: IDBCursorWithValue }
-        ).result;
+    /** Get a value by key, or undefined if it does not exist. */
+    async get<T>(key: string): Promise<T | undefined> {
+      const stored = await obj.getStoredObject<T>(key);
 
-        if (cursor) {
-          if (cursor.key) {
-            const obj = validateStoredObject(cursor.value);
-            if (obj !== undefined) {
-              await callback(
-                String(cursor.key),
-                obj.value as T,
-                obj.expiryMs,
-                obj.storedMs,
-              );
+      return stored?.value;
+    },
+
+    /** Generic way to iterate through all entries. */
+    async forEach<T>(
+      callback: (
+        key: string,
+        value: T,
+        expiryMs: number,
+        storedMs: number,
+      ) => void | Promise<void>,
+    ): Promise<void> {
+      await transact<void>("readonly", (objectStore, resolve, reject) => {
+        const request = withOnError(objectStore.openCursor(), reject);
+
+        request.onsuccess = async (event) => {
+          const cursor = (
+            event.target as unknown as { result: IDBCursorWithValue }
+          ).result;
+
+          if (cursor) {
+            if (cursor.key) {
+              const valid = validateStoredObject(cursor.value);
+              if (valid !== undefined) {
+                await callback(
+                  String(cursor.key),
+                  valid.value as T,
+                  valid.expiryMs,
+                  valid.storedMs,
+                );
+              }
             }
+            cursor.continue();
+          } else {
+            resolve();
           }
-          cursor.continue();
-        } else {
+        };
+      });
+    },
+
+    /**
+     * Returns the number of items in the store. Note that getting the size
+     * requires iterating through the entire store because the items could expire
+     * at any time, and hence the size is a dynamic number.
+     */
+    async size(): Promise<number> {
+      let count = 0;
+      await obj.forEach(() => {
+        count++;
+      });
+      return count;
+    },
+
+    /** Remove all items from the store. */
+    async clear(): Promise<void> {
+      await transact<void>("readwrite", (objectStore, resolve, reject) => {
+        const request = withOnError(objectStore.clear(), reject);
+
+        request.onsuccess = () => {
           resolve();
-        }
-      };
-    });
-  }
+        };
+      });
+    },
 
-  /**
-   * Returns the number of items in the store. Note that getting the size
-   * requires iterating through the entire store because the items could expire
-   * at any time, and hence the size is a dynamic number.
-   */
-  public async size(): Promise<number> {
-    let count = 0;
-    await this.forEach(() => {
-      count++;
-    });
-    return count;
-  }
+    /**
+     * Returns all items as map of key to value, mainly used for debugging dumps.
+     * The type T is applied to all values, even though they might not be of type
+     * T (in the case when you store different data types in the same store).
+     */
+    async asMap<T>(): Promise<Map<string, StoredObject<T>>> {
+      const map = new Map<string, StoredObject<T>>();
+      await obj.forEach((key, value, expiryMs, storedMs) => {
+        map.set(key, { value: value as T, expiryMs, storedMs });
+      });
+      return map;
+    },
 
-  /** Remove all items from the store. */
-  public async clear(): Promise<void> {
-    await this.transact<void>("readwrite", (objectStore, resolve, reject) => {
-      const request = withOnError(objectStore.clear(), reject);
+    /** Returns the ms timestamp for the last GC (garbage collection). */
+    getLastGcMs(): number {
+      const lastGcMsStr = localStorage.getItem(gcMsStorageKey);
+      if (!lastGcMsStr) return 0;
 
-      request.onsuccess = () => {
-        resolve();
-      };
-    });
-  }
+      const ms = Number(lastGcMsStr);
+      return isNaN(ms) ? 0 : ms;
+    },
 
-  /**
-   * Returns all items as map of key to value, mainly used for debugging dumps.
-   * The type T is applied to all values, even though they might not be of type
-   * T (in the case when you store different data types in the same store).
-   */
-  public async asMap<T>(): Promise<Map<string, StoredObject<T>>> {
-    const map = new Map<string, StoredObject<T>>();
-    await this.forEach((key, value, expiryMs, storedMs) => {
-      map.set(key, { value: value as T, expiryMs, storedMs });
-    });
-    return map;
-  }
+    /** Set the ms timestamp for the last GC (garbage collection). */
+    setLastGcMs(ms: number) {
+      localStorage.setItem(gcMsStorageKey, String(ms));
+    },
 
-  /** Returns the ms timestamp for the last GC (garbage collection). */
-  public get lastGcMs(): number {
-    const lastGcMsStr = globalThis.localStorage.getItem(this.gcMsStorageKey);
-    if (!lastGcMsStr) return 0;
+    /** Perform garbage-collection if due, else do nothing. */
+    async gc(): Promise<void> {
+      const lastGcMs = obj.getLastGcMs();
 
-    const ms = Number(lastGcMsStr);
-    return isNaN(ms) ? 0 : ms;
-  }
+      // Set initial timestamp - no need GC now.
+      if (!lastGcMs) {
+        obj.setLastGcMs(Date.now());
+        return;
+      }
 
-  /** Set the ms timestamp for the last GC (garbage collection). */
-  public set lastGcMs(ms: number) {
-    globalThis.localStorage.setItem(this.gcMsStorageKey, String(ms));
-  }
+      if (Date.now() < lastGcMs + gcIntervalMs) {
+        return; // not due for next GC yet
+      }
 
-  /** Perform garbage-collection if due, else do nothing. */
-  public async gc(): Promise<void> {
-    const lastGcMs = this.lastGcMs;
+      // GC is due now, so run it.
+      await obj.gcNow();
+    },
 
-    // Set initial timestamp - no need GC now.
-    if (!lastGcMs) {
-      this.lastGcMs = Date.now();
-      return;
-    }
+    /**
+     * Perform garbage collection immediately without checking whether we are
+     * due for the next GC or not.
+     */
+    async gcNow(): Promise<void> {
+      console.log(`Starting kvStore GC on ${dbName} v${dbVersion}...`);
 
-    if (Date.now() < lastGcMs + this.gcIntervalMs) {
-      return; // not due for next GC yet
-    }
+      // Prevent concurrent GC runs.
+      obj.setLastGcMs(Date.now());
 
-    // GC is due now, so run it.
-    await this.gcNow();
-  }
+      const keysToDelete: string[] = [];
+      await obj.forEach(
+        async (key: string, value: unknown, expiryMs: number) => {
+          if (value === undefined || Date.now() >= expiryMs) {
+            keysToDelete.push(key);
+          }
+        },
+      );
 
-  /**
-   * Perform garbage collection immediately without checking whether we are
-   * due for the next GC or not.
-   */
-  public async gcNow(): Promise<void> {
-    console.log(`Starting kvStore GC on ${this.dbName} v${this.dbVersion}...`);
+      if (keysToDelete.length) {
+        await obj.delete(keysToDelete);
+      }
 
-    // Prevent concurrent GC runs.
-    this.lastGcMs = Date.now();
+      console.log(
+        `Finished kvStore GC on ${dbName} v${dbVersion} ` +
+          `- deleted ${keysToDelete.length} keys`,
+      );
 
-    const keysToDelete: string[] = [];
-    await this.forEach(
-      async (key: string, value: unknown, expiryMs: number) => {
-        if (value === undefined || Date.now() >= expiryMs) {
-          keysToDelete.push(key);
-        }
-      },
-    );
+      // Mark the end time as last GC time.
+      obj.setLastGcMs(Date.now());
+    },
 
-    if (keysToDelete.length) {
-      await this.delete(keysToDelete);
-    }
+    /** Returns `this` casted into a StorageAdapter<T>. */
+    asStorageAdapter<T>(): StorageAdapter<T> {
+      return obj as StorageAdapter<T>;
+    },
+  } as const;
 
-    console.log(
-      `Finished kvStore GC on ${this.dbName} v${this.dbVersion} ` +
-        `- deleted ${keysToDelete.length} keys`,
-    );
-
-    // Mark the end time as last GC time.
-    this.lastGcMs = Date.now();
-  }
-
-  /** Returns `this` casted into a StorageAdapter<T>. */
-  public asStorageAdapter<T>(): StorageAdapter<T> {
-    return this as StorageAdapter<T>;
-  }
+  // Using `any` because the store could store any type of data for each key,
+  // but the caller can specify a more specific type when calling each of the
+  // methods.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return obj satisfies FullStorageAdapter<any>;
 }
+
+export type KvStore = ReturnType<typeof createKvStore>;
 
 /**
  * Default KV store ready for immediate use. You can create new instances if
  * you want, but most likely you will only need one store instance.
  */
-export const kvStore = new KvStore(KvStoreConfig.dbName);
-
-/**
- * Class to represent one key in the store with a default expiration.
- */
-export class KvStoreItem<T> {
-  public readonly defaultExpiryMs: number;
-
-  public constructor(
-    public readonly key: string,
-    defaultExpiryMs: number | Duration = KvStoreConfig.expiryMs,
-    public readonly store = kvStore,
-  ) {
-    this.defaultExpiryMs = defaultExpiryMs && durationOrMsToMs(defaultExpiryMs);
-  }
-
-  /** Set a value in the store. */
-  public async set(
-    value: T,
-    expiryDeltaMs: number | undefined = this.defaultExpiryMs,
-  ): Promise<void> {
-    await this.store.set(this.key, value, expiryDeltaMs);
-  }
-
-  /**
-   * Example usage:
-   *
-   *   const { value, storedMs, expiryMs, storedMs } =
-   *     await myKvItem.getStoredObject();
-   */
-  public async getStoredObject(): Promise<KvStoredObject<T> | undefined> {
-    return await this.store.getStoredObject(this.key);
-  }
-
-  /** Get a value by key, or undefined if it does not exist. */
-  public async get(): Promise<T | undefined> {
-    return await this.store.get(this.key);
-  }
-
-  /** Delete this key from the store. */
-  public async delete(): Promise<void> {
-    await this.store.delete(this.key);
-  }
-}
+export const kvStore = createKvStore(KvStoreConfig.dbName);
 
 /** Create a KV store item with a key and a default expiration. */
 export function kvStoreItem<T>(
   key: string,
   expiryMs?: number | Duration,
-  store = kvStore,
-): KvStoreItem<T> {
-  expiryMs = expiryMs && durationOrMsToMs(expiryMs);
+  store: KvStore = kvStore,
+) {
+  const defaultExpiryMs = expiryMs && durationOrMsToMs(expiryMs);
 
-  return new KvStoreItem<T>(key, expiryMs, store);
+  const obj = {
+    key,
+    defaultExpiryMs,
+    store,
+
+    /** Set a value in the store. */
+    async set(value: T, expiryDeltaMs?: number | undefined): Promise<void> {
+      await store.set(key, value, expiryDeltaMs ?? defaultExpiryMs);
+    },
+
+    /**
+     * Example usage:
+     *
+     *   const { value, storedMs, expiryMs, storedMs } =
+     *     await myKvItem.getStoredObject();
+     */
+    async getStoredObject(): Promise<KvStoredObject<T> | undefined> {
+      return await store.getStoredObject(key);
+    },
+
+    /** Get a value by key, or undefined if it does not exist. */
+    async get(): Promise<T | undefined> {
+      return await store.get(key);
+    },
+
+    /** Delete this key from the store. */
+    async delete(): Promise<void> {
+      await store.delete(key);
+    },
+  } as const;
+
+  return obj;
 }
+
+/** Class to represent one key in the store with a default expiration. */
+export type KvStoreItem<T> = ReturnType<typeof kvStoreItem<T>>;

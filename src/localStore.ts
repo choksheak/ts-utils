@@ -77,25 +77,36 @@ export function createLocalStore(
     gcIntervalMs?: number | Duration;
   },
 ) {
+  const keyPrefix = storeName + ":";
+
+  const defaultExpiryMs = options?.defaultExpiryMs
+    ? durationOrMsToMs(options.defaultExpiryMs)
+    : LocalStoreConfig.expiryMs;
+
+  const gcIntervalMs = options?.gcIntervalMs
+    ? durationOrMsToMs(options.gcIntervalMs)
+    : LocalStoreConfig.gcIntervalMs;
+
+  const gcMsStorageKey = `__localStore:lastGcMs:${storeName}`;
+
   const obj = {
+    /** Input name for the store. */
     storeName,
 
     /**
      * The prefix string for the local storage key which identifies items
      * belonging to this namespace.
      */
-    keyPrefix: storeName + ":",
+    keyPrefix,
 
-    defaultExpiryMs: options?.defaultExpiryMs
-      ? durationOrMsToMs(options.defaultExpiryMs)
-      : LocalStoreConfig.expiryMs,
+    /** Default expiry to use if not specified in set(). */
+    defaultExpiryMs,
 
-    gcIntervalMs: options?.gcIntervalMs
-      ? durationOrMsToMs(options.gcIntervalMs)
-      : LocalStoreConfig.gcIntervalMs,
+    /** Time interval for when GC's occur. */
+    gcIntervalMs,
 
     /** Local storage key name for the last GC completed timestamp. */
-    gcMsStorageKey: `__localStore:lastGcMs:${storeName}`,
+    gcMsStorageKey,
 
     /** Set a value in the store. */
     set<T>(key: string, value: T, expiryDeltaMs?: number | Duration): T {
@@ -103,11 +114,10 @@ export function createLocalStore(
       const stored: StoredObject<T> = {
         value,
         storedMs: nowMs,
-        expiryMs:
-          nowMs + durationOrMsToMs(expiryDeltaMs ?? obj.defaultExpiryMs),
+        expiryMs: nowMs + durationOrMsToMs(expiryDeltaMs ?? defaultExpiryMs),
       };
 
-      localStorage.setItem(obj.keyPrefix + key, JSON.stringify(stored));
+      localStorage.setItem(keyPrefix + key, JSON.stringify(stored));
 
       obj.gc(); // check GC on every write
 
@@ -117,17 +127,17 @@ export function createLocalStore(
     /** Delete one or multiple keys. */
     delete(key: string | string[]): void {
       if (typeof key === "string") {
-        localStorage.removeItem(obj.keyPrefix + key);
+        localStorage.removeItem(keyPrefix + key);
       } else {
         for (const k of key) {
-          localStorage.removeItem(obj.keyPrefix + k);
+          localStorage.removeItem(keyPrefix + k);
         }
       }
     },
 
     /** Mainly used to get the expiration timestamp of an object. */
     getStoredObject<T>(key: string): StoredObject<T> | undefined {
-      const k = obj.keyPrefix + key;
+      const k = keyPrefix + key;
       const stored = localStorage.getItem(k);
 
       if (!stored) {
@@ -173,9 +183,9 @@ export function createLocalStore(
       ) => void,
     ): void {
       for (const k of Object.keys(localStorage)) {
-        if (!k.startsWith(obj.keyPrefix)) continue;
+        if (!k.startsWith(keyPrefix)) continue;
 
-        const key = k.slice(obj.keyPrefix.length);
+        const key = k.slice(keyPrefix.length);
         const stored = obj.getStoredObject(key);
 
         if (!stored) continue;
@@ -202,7 +212,7 @@ export function createLocalStore(
       // Note that we don't need to use obj.forEach() because we are just
       // going to delete all the items without checking for expiration.
       for (const key of Object.keys(localStorage)) {
-        if (key.startsWith(obj.keyPrefix)) {
+        if (key.startsWith(keyPrefix)) {
           localStorage.removeItem(key);
         }
       }
@@ -225,7 +235,7 @@ export function createLocalStore(
 
     /** Returns the ms timestamp for the last GC (garbage collection). */
     getLastGcMs(): number {
-      const lastGcMsStr = localStorage.getItem(obj.gcMsStorageKey);
+      const lastGcMsStr = localStorage.getItem(gcMsStorageKey);
       if (!lastGcMsStr) return 0;
 
       const ms = Number(lastGcMsStr);
@@ -234,7 +244,7 @@ export function createLocalStore(
 
     /** Set the ms timestamp for the last GC (garbage collection). */
     setLastGcMs(ms: number) {
-      localStorage.setItem(obj.gcMsStorageKey, String(ms));
+      localStorage.setItem(gcMsStorageKey, String(ms));
     },
 
     /** Perform garbage-collection if due, else do nothing. */
@@ -247,7 +257,7 @@ export function createLocalStore(
         return;
       }
 
-      if (Date.now() < lastGcMs + obj.gcIntervalMs) {
+      if (Date.now() < lastGcMs + gcIntervalMs) {
         return; // not due for next GC yet
       }
 
@@ -260,7 +270,7 @@ export function createLocalStore(
      * due for the next GC or not.
      */
     gcNow(): void {
-      console.log(`Starting localStore GC on ${obj.storeName}`);
+      console.log(`Starting localStore GC on ${storeName}`);
 
       // Prevent concurrent GC runs.
       obj.setLastGcMs(Date.now());
@@ -274,7 +284,7 @@ export function createLocalStore(
       });
 
       console.log(
-        `Finished localStore GC on ${obj.storeName} - deleted ${count} keys`,
+        `Finished localStore GC on ${storeName} - deleted ${count} keys`,
       );
 
       // Mark the end time as last GC time.
@@ -287,6 +297,9 @@ export function createLocalStore(
     },
   } as const;
 
+  // Using `any` because the store could store any type of data for each key,
+  // but the caller can specify a more specific type when calling each of the
+  // methods.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return obj satisfies FullStorageAdapter<any>;
 }
@@ -305,16 +318,16 @@ export function localStoreItem<T>(
   expiryMs?: number | Duration,
   store: LocalStore = localStore,
 ) {
-  expiryMs = expiryMs && durationOrMsToMs(expiryMs);
+  const defaultExpiryMs = expiryMs && durationOrMsToMs(expiryMs);
 
   const obj = {
     key,
-    defaultExpiryMs: expiryMs && durationOrMsToMs(expiryMs),
-    store: store ?? localStore,
+    defaultExpiryMs,
+    store,
 
     /** Set a value in the store. */
     set(value: T, expiryDeltaMs?: number | undefined): void {
-      this.store.set(this.key, value, expiryDeltaMs ?? obj.defaultExpiryMs);
+      store.set(key, value, expiryDeltaMs ?? defaultExpiryMs);
     },
 
     /**
@@ -324,17 +337,17 @@ export function localStoreItem<T>(
      *     await myLocalItem.getStoredObject();
      */
     getStoredObject(): StoredObject<T> | undefined {
-      return obj.store.getStoredObject(this.key);
+      return store.getStoredObject(key);
     },
 
     /** Get a value by key, or undefined if it does not exist. */
     get(): T | undefined {
-      return obj.store.get(obj.key);
+      return store.get(key);
     },
 
     /** Delete this key from the store. */
     delete(): void {
-      obj.store.delete(obj.key);
+      store.delete(key);
     },
   };
 

@@ -135,7 +135,7 @@ describe("KVStore", () => {
       await kvStore.gc();
       const endMs = Date.now();
 
-      const lastGcMs = kvStore.lastGcMs;
+      const lastGcMs = kvStore.getLastGcMs();
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
 
@@ -179,7 +179,7 @@ describe("KVStore", () => {
       await kvStore.gcNow();
       const endMs = Date.now();
 
-      const lastGcMs = kvStore.lastGcMs;
+      const lastGcMs = kvStore.getLastGcMs();
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
     });
