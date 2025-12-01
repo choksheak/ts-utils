@@ -138,7 +138,7 @@ describe("localStore", () => {
       localStore.gc();
       const endMs = Date.now();
 
-      const lastGcMs = localStore.lastGcMs;
+      const lastGcMs = localStore.getLastGcMs();
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
 
@@ -182,7 +182,7 @@ describe("localStore", () => {
       localStore.gcNow();
       const endMs = Date.now();
 
-      const lastGcMs = localStore.lastGcMs;
+      const lastGcMs = localStore.getLastGcMs();
       expect(lastGcMs).toBeGreaterThanOrEqual(startMs);
       expect(lastGcMs).toBeLessThanOrEqual(endMs);
     });

@@ -9,21 +9,21 @@ export function timer() {
     startMs: Date.now(),
     endMs: 0,
 
-    stop: (): void => {
+    stop(): void {
       obj.endMs = Date.now();
     },
 
-    restart: (): void => {
+    restart(): void {
       obj.endMs = 0;
       obj.startMs = Date.now();
     },
 
-    elapsedMs: (): number => {
+    elapsedMs(): number {
       const stopMs = obj.endMs || Date.now();
       return stopMs - obj.startMs;
     },
 
-    toString: (): string => {
+    toString(): string {
       return elapsed(obj.elapsedMs());
     },
   };
