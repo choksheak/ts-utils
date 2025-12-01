@@ -1,33 +1,35 @@
 import { elapsed } from "./duration";
 
-export class Timer {
-  public startMs: number;
-  public endMs = 0;
+/**
+ * Create a new timer and starts the timing right away. Returns a closed object
+ * instead of a class to make sure the variables are bound correctly.
+ */
+export function timer() {
+  const obj = {
+    startMs: Date.now(),
+    endMs: 0,
 
-  public constructor() {
-    this.startMs = Date.now();
-  }
+    stop: (): void => {
+      obj.endMs = Date.now();
+    },
 
-  public stop(): void {
-    this.endMs = Date.now();
-  }
+    restart: (): void => {
+      obj.endMs = 0;
+      obj.startMs = Date.now();
+    },
 
-  public restart(): void {
-    this.endMs = 0;
-    this.startMs = Date.now();
-  }
+    elapsedMs: (): number => {
+      const stopMs = obj.endMs || Date.now();
+      return stopMs - obj.startMs;
+    },
 
-  public elapsedMs(): number {
-    const stopMs = this.endMs || Date.now();
-    return stopMs - this.startMs;
-  }
+    toString: (): string => {
+      return elapsed(obj.elapsedMs());
+    },
+  };
 
-  public toString(): string {
-    return elapsed(this.elapsedMs());
-  }
+  return obj;
 }
 
-/** Shorthand for `new Timer()` to make this easier to use. */
-export function timer(): Timer {
-  return new Timer();
-}
+/** Defines the type of the Timer object. */
+export type Timer = ReturnType<typeof timer>;
