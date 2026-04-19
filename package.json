@@ -2,17 +2,18 @@
   "name": "@choksheak/ts-utils",
   "license": "The Unlicense",
   "version": "0.3.7",
+  "packageManager": "pnpm@10.18.3",
   "description": "Random Typescript utilities with support for full tree-shaking",
   "private": false,
   "sideEffects": false,
   "scripts": {
     "lint": "eslint .",
     "fix": "eslint . --fix",
-    "tsc": "npx tsc",
-    "ft": "npm run fix && npm run tsc",
+    "tsc": "tsc",
+    "ft": "pnpm run fix && pnpm run tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "ci": "npm run lint && npm run tsc && npm run build && npm run test",
+    "ci": "pnpm run lint && pnpm run tsc && pnpm run build && pnpm run test",
     "ls": "lint-staged",
     "docs": "typedoc",
     "clean": "rm -rf dist",
@@ -20,22 +21,23 @@
     "gen-types": "tsc --emitDeclarationOnly --declaration",
     "gen-exports": "tsx scripts/gen-exports.ts",
     "pkg": "scripts/package.sh",
-    "pub": "npm publish dist/ --access=public",
+    "pub": "pnpm publish dist/ --access=public",
     "commit": "git add . && git commit -m 'Release '`bump-version get`",
-    "release": "npm run clean && bump-version && npm i && npm run ci && npm run pkg && npm run pub && npm run commit",
+    "release": "pnpm run clean && bump-version && pnpm install && pnpm run ci && pnpm run pkg && pnpm run pub && pnpm run commit",
+    "preinstall": "npx only-allow pnpm",
     "postinstall": "simple-git-hooks"
   },
   "simple-git-hooks": {
-    "pre-commit": "npx lint-staged"
+    "pre-commit": "pnpm exec lint-staged"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
       "echo Using `eslint --fix` will revert changes without printing errors!",
-      "npm run lint"
+      "pnpm run lint"
     ],
     "*.{ts,tsx}": [
       "echo `tsc-files --noEmit` cannot read *.module.css files",
-      "bash -c 'npx tsc'"
+      "bash -c 'pnpm exec tsc'"
     ]
   },
   "repository": {
@@ -72,6 +74,7 @@
     "jiti": "^2.6.1",
     "lint-staged": "^16.2.6",
     "mock-local-storage": "^1.1.24",
+    "only-allow": "^1.2.2",
     "prettier": "^3.6.2",
     "simple-git-hooks": "^2.13.1",
     "tsup": "^8.5.0",
