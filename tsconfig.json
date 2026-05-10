@@ -14,6 +14,7 @@
       "esnext"
     ],
     "types": [
+      "node",
       "vitest/globals"
     ],
     "declaration": true,
@@ -23,6 +24,7 @@
     "esModuleInterop": true,
     "noEmit": true,
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "ignoreDeprecations": "6.0"
   }
 }

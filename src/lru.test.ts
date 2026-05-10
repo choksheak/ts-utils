@@ -1,3 +1,5 @@
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+
 import { LRUMap } from "./lru";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -287,14 +289,14 @@ describe("getOrInsertComputed", () => {
   test("does not call the callback on hit", () => {
     const cache = new LRUMap<string, number>();
     cache.set("a", 1);
-    const cb = vitest.fn(() => 99);
+    const cb = vi.fn(() => 99);
     cache.getOrInsertComputed("a", cb);
     expect(cb).not.toHaveBeenCalled();
   });
 
   test("calls the callback on miss and inserts the result", () => {
     const cache = new LRUMap<string, number>();
-    const cb = vitest.fn((k: string) => k.length);
+    const cb = vi.fn((k: string) => k.length);
     const result = cache.getOrInsertComputed("hello", cb);
     expect(cb).toHaveBeenCalledWith("hello");
     expect(result).toBe(5);
@@ -306,14 +308,14 @@ describe("getOrInsertLoaded", () => {
   test("does not call loader on hit", async () => {
     const cache = new LRUMap<string, number>();
     cache.set("a", 1);
-    const loader = vitest.fn(async () => 99);
+    const loader = vi.fn(async () => 99);
     await cache.getOrInsertLoaded("a", loader);
     expect(loader).not.toHaveBeenCalled();
   });
 
   test("calls loader on miss and inserts the result", async () => {
     const cache = new LRUMap<string, number>();
-    const loader = vitest.fn(async () => 42);
+    const loader = vi.fn(async () => 42);
     const result = await cache.getOrInsertLoaded("a", loader);
     expect(loader).toHaveBeenCalledWith("a");
     expect(result).toBe(42);
@@ -398,34 +400,34 @@ describe("Symbol.toStringTag", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("TTL expiry", () => {
-  beforeEach(() => vitest.useFakeTimers());
-  afterEach(() => vitest.useRealTimers());
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
 
   test("entry is accessible before TTL elapses", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(999);
+    vi.advanceTimersByTime(999);
     expect(cache.get("a")).toBe(1);
   });
 
   test("get returns undefined after TTL elapses", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     expect(cache.get("a")).toBeUndefined();
   });
 
   test("has returns false after TTL elapses", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     expect(cache.has("a")).toBe(false);
   });
 
   test("peek returns undefined after TTL elapses", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(1000);
+    vi.advanceTimersByTime(1000);
     expect(cache.peek("a")).toBeUndefined();
   });
 
@@ -436,8 +438,8 @@ describe("TTL expiry", () => {
   test("setTimeout callback auto-deletes", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 500 });
     cache.set("a", 1);
-    vitest.setSystemTime(Date.now() + 500);
-    vitest.runAllTimers(); // callback fires but entry is NOT deleted
+    vi.setSystemTime(Date.now() + 500);
+    vi.runAllTimers(); // callback fires but entry is NOT deleted
     // Entry is logically expired (get/has/peek all return undefined)
     expect(cache.size).toBe(0);
     // get() also returns undefined (isExpired check), and as a side-effect deletes it
@@ -447,18 +449,18 @@ describe("TTL expiry", () => {
   test("re-setting a key resets its TTL", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(800);
+    vi.advanceTimersByTime(800);
     cache.set("a", 2); // TTL reset
-    vitest.advanceTimersByTime(800); // 800ms into new TTL — still alive
+    vi.advanceTimersByTime(800); // 800ms into new TTL — still alive
     expect(cache.get("a")).toBe(2);
   });
 
   test("old timeout does not delete re-set entry", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
-    vitest.advanceTimersByTime(800);
+    vi.advanceTimersByTime(800);
     cache.set("a", 2); // new TTL; old timer will fire at t=1000
-    vitest.advanceTimersByTime(200); // old timer fires — must NOT delete
+    vi.advanceTimersByTime(200); // old timer fires — must NOT delete
     expect(cache.get("a")).toBe(2);
   });
 
@@ -466,14 +468,14 @@ describe("TTL expiry", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
     cache.set("b", 2);
-    vitest.advanceTimersByTime(1000); // both expire
+    vi.advanceTimersByTime(1000); // both expire
     expect(toArray(cache)).toEqual([]);
   });
 
   test("no expiry when ttlMs is not set", () => {
     const cache = new LRUMap<string, number>();
     cache.set("a", 1);
-    vitest.advanceTimersByTime(999999);
+    vi.advanceTimersByTime(999999);
     expect(cache.get("a")).toBe(1);
   });
 
@@ -481,7 +483,7 @@ describe("TTL expiry", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1).set("b", 2);
     cache.clear();
-    expect(() => vitest.runAllTimers()).not.toThrow();
+    expect(() => vi.runAllTimers()).not.toThrow();
     expect(cache.size).toBe(0);
   });
 
@@ -489,7 +491,7 @@ describe("TTL expiry", () => {
     const cache = new LRUMap<string, number>({ ttlMs: 1000 });
     cache.set("a", 1);
     cache.delete("a");
-    expect(() => vitest.runAllTimers()).not.toThrow();
+    expect(() => vi.runAllTimers()).not.toThrow();
     expect(cache.size).toBe(0);
   });
 });

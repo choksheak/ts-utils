@@ -1,3 +1,5 @@
+import { test } from "vitest";
+
 import { isEmpty } from "./isEmpty";
 
 test("isEmpty", () => {

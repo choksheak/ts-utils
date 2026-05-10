@@ -1,3 +1,5 @@
+import { expect, test } from "vitest";
+
 import { arrayBufferToBase64, arrayBufferToHex } from "./arrayBuffer";
 import { sha256 } from "./sha256";
 
