@@ -210,5 +210,9 @@ export class HttpFetch {
   }
 }
 
-/** Exclude retries by default, but can be added using `http.use(retries())`. */
-export const http = new HttpFetch([jsonBody, throwOnError]);
+/**
+ * Standard http instance that can be used for most purposes.
+ * - To add retries, use `http.use(retries())`
+ * - To throw on errors, use `http.use(throwOnError)`
+ */
+export const http = new HttpFetch([jsonBody]);
