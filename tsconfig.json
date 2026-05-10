@@ -13,6 +13,9 @@
       "dom.iterable",
       "esnext"
     ],
+    "types": [
+      "vitest/globals"
+    ],
     "declaration": true,
     "strict": true,
     "moduleResolution": "nodenext",
