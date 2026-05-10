@@ -49,28 +49,6 @@ export type HttpMiddleware = (
   next: (req: Request) => Promise<Response>,
 ) => Promise<Response>;
 
-/** JSON body serialization. */
-export const jsonBody: HttpMiddleware = async (request, next) => {
-  let newRequest = request;
-
-  // Automatically stringify object bodies as JSON
-  if (request.body) {
-    let newHeaders = request.headers;
-
-    if (!newHeaders.has("Content-Type")) {
-      newHeaders = new Headers(newHeaders);
-      newHeaders.set("Content-Type", "application/json");
-    }
-
-    newRequest = new Request(request, {
-      headers: newHeaders,
-      body: JSON.stringify(request.body),
-    });
-  }
-
-  return await next(newRequest);
-};
-
 /** Throw on non-OK responses. */
 export const throwOnError: HttpMiddleware = async (request, next) => {
   const response = await next(request);
@@ -215,4 +193,4 @@ export class HttpFetch {
  * - To add retries, use `http.use(retries())`
  * - To throw on errors, use `http.use(throwOnError)`
  */
-export const http = new HttpFetch([jsonBody]);
+export const http = new HttpFetch();
