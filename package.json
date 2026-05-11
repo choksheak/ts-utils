@@ -13,6 +13,7 @@
     "ft": "pnpm run fix && pnpm run tsc",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test-real-http": "tsx scripts/real-http-test.ts",
     "ci": "pnpm run lint && pnpm run tsc && pnpm run build && pnpm run test",
     "ls": "lint-staged",
     "docs": "typedoc",

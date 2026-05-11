@@ -14,8 +14,7 @@
       "esnext"
     ],
     "types": [
-      "node",
-      "vitest/globals"
+      "node"
     ],
     "declaration": true,
     "strict": true,
