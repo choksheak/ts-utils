@@ -6,7 +6,7 @@
     "**/*.test.ts"
   ],
   "compilerOptions": {
-    "module": "nodenext",
+    "module": "esnext",
     "target": "esnext",
     "lib": [
       "dom",
@@ -18,7 +18,7 @@
     ],
     "declaration": true,
     "strict": true,
-    "moduleResolution": "nodenext",
+    "moduleResolution": "bundler",
     "skipLibCheck": true,
     "esModuleInterop": true,
     "noEmit": true,
