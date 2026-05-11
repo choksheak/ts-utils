@@ -18,11 +18,11 @@
     "ls": "lint-staged",
     "docs": "typedoc",
     "clean": "rm -rf dist",
-    "build": "tsup src/*",
+    "build": "tsx scripts/gen-index.ts && tsup src/*",
     "gen-types": "tsc --emitDeclarationOnly --declaration",
     "gen-exports": "tsx scripts/gen-exports.ts",
     "pkg": "scripts/package.sh",
-    "pub": "pnpm publish dist/ --access=public",
+    "pub": "pnpm publish dist/",
     "commit": "git add . && git commit -m 'Release '`bump-version get`",
     "release": "pnpm run clean && bump-version && pnpm install && pnpm run ci && pnpm run pkg && pnpm run commit && pnpm run pub",
     "preinstall": "npx only-allow pnpm",
@@ -53,8 +53,17 @@
     "library"
   ],
   "author": "ChokSheak Lau",
-  "type": "commonjs",
+  "type": "module",
   "homepage": "https://github.com/choksheak/ts-utils#readme",
+  "main": "./index.cjs",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "files": [
+    "*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@choksheak/bump-version": "^0.1.2",
     "@eslint/compat": "^1.4.0",
