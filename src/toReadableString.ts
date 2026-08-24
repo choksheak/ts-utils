@@ -10,6 +10,10 @@ export function toReadableString(
     return u;
   }
 
+  if (u === undefined) {
+    return "undefined";
+  }
+
   if (u instanceof Error) {
     const error = u as Error;
     let result = "";
@@ -60,11 +64,7 @@ export function toReadableString(
   }
 
   // If the object has a custom toString(), then use it.
-  if (
-    u !== null &&
-    typeof u === "object" &&
-    u.toString !== Object.prototype.toString
-  ) {
+  if (u && typeof u === "object" && u.toString !== Object.prototype.toString) {
     return u.toString();
   }
 
